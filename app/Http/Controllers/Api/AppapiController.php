@@ -1,0 +1,1168 @@
+<?php
+namespace App\Http\Controllers\Api;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\Request;
+use Lcobucci\JWT\Parser;
+use App\Models\BranchModel;
+use App\Models\TransportsModels;
+use App\Models\BrandModel;
+use App\Models\SuppliersModels;
+use App\Models\ItemModel;
+use App\Models\BuyerModel;
+use App\Models\OrderModel;
+use App\Models\OrderDeliveryModel;
+use App\Models\RatingModel;
+use App\Models\SiteInfoModel;
+use App\Models\BankdetailModel;
+use App\Models\EnquiryModel;
+use App\Models\EnquiryDataModel;
+use App\Models\EnquiryGalleryModel;
+use App\Requesters\OrderRequester;
+use App\User;
+use DB;
+use Hash;
+use Mail;
+use Auth;
+use PDF;
+use File;
+use Laravel\Passport\Token;
+
+class AppapiController extends Controller{
+    /**
+     * Display a listing of the resource.
+     *
+     * @param Request $request
+     * @return LengthAwarePaginator|mixed
+     */
+
+     // 
+
+    //test api
+    public function test(Request $request){      
+        //$notification   = "Remaining amount is not sufficient ";
+         //notifyAndroid('10867','test',$notification);
+        //fcmnotifyAndroid2();
+    }
+    public function bgreport(Request $request){
+        
+        $value      = $request->bearerToken();
+    	$id         = (new Parser())->parse($value)->getHeader('jti');
+    	//$user_id    = Token::find($id)->user_id;
+    	$user_id    = $request->user_id;
+    	//$startdate=$request->start_date;
+    	//$enddate=$request->end_date;
+    	//if($user_id!='' && $startdate!='' && $enddate!=''){
+    	  if($user_id!='' ){   
+             
+         //$Bamount     =  busy2($user_id,$startdate,$enddate);
+         $Bamount     =  busy4($user_id);
+           
+            return response()->json(['status'=>true,'message'=> 'Success','result'=>$Bamount],200);
+            
+        }else{
+            return response()->json(['status'=>true,'message'=> 'Token not matched!','result'=>[]],200);
+        }
+    }
+
+    public function bgreport_new(Request $request){
+        
+        $value      = $request->bearerToken();
+    	$id         = (new Parser())->parse($value)->getHeader('jti');
+    	//$user_id    = Token::find($id)->user_id;
+    	$user_id    = $request->user_id;
+    	//$startdate=$request->start_date;
+    	//$enddate=$request->end_date;
+    	//if($user_id!='' && $startdate!='' && $enddate!=''){
+    	  if($user_id!='' ){   
+             
+         //$Bamount     =  busy2($user_id,$startdate,$enddate);
+         $Bamount     =  busy4444($user_id);
+           
+            return response()->json(['status'=>true,'message'=> 'Success','result'=>$Bamount],200);
+            
+        }else{
+            return response()->json(['status'=>true,'message'=> 'Token not matched!','result'=>[]],200);
+        }
+    }
+    
+    public function ledgerbgreport($user_id){
+        
+        //$value      = $request->bearerToken();
+    	//$id         = (new Parser())->parse($value)->getHeader('jti');
+    	//$user_id    = Token::find($id)->user_id;
+    	//$user_id    = $request->user_id;
+    	 
+    	if($user_id!=''){
+    	     
+             
+         $Bamount     =  busy3($user_id);
+      if(count($Bamount)<=0){
+         $Bamount[]     =array('total_pending_amount' => "0");
+      }
+       
+           
+            return response()->json(['status'=>true,'message'=> 'Success','result'=>$Bamount],200);
+            
+        }else{
+            return response()->json(['status'=>true,'message'=> 'Token not matched Or Start and End Date required!','result'=>[]],200);
+        }
+    }
+    
+    public function bgreportpdf(Request $request){
+    	 
+    	$user_id    = $request->user_id;
+    	$account_namearr = User::where('veepeeuser_id',$user_id)->distinct('name')->first();
+    	$account_name=$account_namearr['name'];
+    	//$startdate=$request->start_date;
+    	//$enddate=$request->end_date;
+    	$user_type=$request->user_type;
+     
+    	if($user_id!='' ){
+    	     
+             
+         //$Bamount     =  busy2($user_id,$startdate,$enddate);
+         $Bamount     =  busy4($user_id);
+           
+           $filename=$user_id.'.pdf'; 
+           
+             
+    return view('print',compact('Bamount','user_type','user_id','account_name'));
+     
+            
+        }else{
+            return response()->json(['status'=>true,'message'=> 'Token not matched!','result'=>[]],200);
+        }
+    }
+
+    public function bgreportpdflager(Request $request){
+        
+         
+    	$clbal = $request->clbal;
+    	$user_id    = $request->user_id;
+    	$account_namearr = User::where('veepeeuser_id',$user_id)->distinct('name')->first();
+    	$account_name=$account_namearr['name'];
+    	//$startdate=$request->start_date;
+    	//$enddate=$request->end_date;
+    	$user_type=$request->user_type;
+     
+    	if($user_id!='' ){
+    	     
+             
+         //$Bamount     =  busy2($user_id,$startdate,$enddate);
+         $Bamount     =  busy4444($user_id);
+         //print_r($Bamount);
+           
+           $filename=$user_id.'.pdf'; 
+           
+             
+    return view('print_bgreportpdflager',compact('Bamount','user_type','user_id','account_name', 'clbal'));
+     
+            
+        }else{
+            return response()->json(['status'=>true,'message'=> 'Token not matched!','result'=>[]],200);
+        }
+    }
+    
+    public function bgreportpdfdownload(Request $request){
+        
+         
+    	$clbal = $request->clbal;
+    	$user_id    = $request->user_id;
+    	$account_namearr = User::where('veepeeuser_id',$user_id)->distinct('name')->first();
+    	$account_name=$account_namearr['name'];
+    	//$startdate=$request->start_date;
+    	//$enddate=$request->end_date;
+    	$user_type=$request->user_type;
+     
+    	//if($user_id!='' && $startdate!='' && $enddate!=''){
+    	 if($user_id!=''){    
+             
+         //$Bamount     =  busy2($user_id,$startdate,$enddate);
+           $Bamount     =  busy4444($user_id);
+           $filename=$user_id.'.pdf'; 
+          $pdf = PDF::loadView('print_prev',compact('Bamount','user_type','user_id','account_name','clbal'));  
+                return $pdf->download($filename);
+                 //return $pdf->stream($filename);
+             
+    
+    //return PDF::loadView('print', $Bamount)->download('print.pdf');
+            
+        }else{
+            return response()->json(['status'=>true,'message'=> 'Token not matched !','result'=>[]],200);
+        }
+    }
+    
+    public function bgledgerpdf(Request $request){
+        $clbal = '';//$request->clbal;
+        $user_id    = $request->user_id;
+    	$account_namearr = User::where('veepeeuser_id',$user_id)->distinct('name')->first();
+    	$account_name=$account_namearr['name'];
+    	$user_type=$request->user_type;
+        $startdate=date('Y-m-d', strtotime($request->start_date));
+    	$enddate=date('Y-m-d', strtotime($request->end_date));
+    	if($user_id!='' && $startdate!='' && $enddate!=''){    
+            
+          //$Bamount     =  busy2($user_id,$startdate,$enddate);
+           $Bamount     =  busyDatewise($user_id,$startdate,$enddate);
+          //dd($Bamount);
+           $filename=$user_id.'.pdf'; 
+           return view('printledgerbusy',compact('Bamount','user_type','user_id','account_name','clbal','startdate','enddate'));
+           //$pdf = PDF::loadView('printledgerbusy',compact('Bamount','user_type','user_id','account_name','clbal','startdate','enddate'));  
+               // return $pdf->download($filename);
+                // return $pdf->stream($filename); 
+            //return PDF::loadView('print', $Bamount)->download('print.pdf'); 
+        }else{
+            return response()->json(['status'=>true,'message'=> 'Token not matched !','result'=>[]],200);
+        }
+    }
+    
+    public function sendbgledgerpdf(Request $request){
+        $clbal = '';
+        $user_id    = $request->user_id;
+    	$account_namearr = User::where('veepeeuser_id',$user_id)->distinct('name')->first();
+    	 
+    	$account_name=$account_namearr['name'];
+    	$user_type=$request->user_type;
+        $startdate=date('Y-m-d', strtotime($request->start_date));
+    	$enddate=date('Y-m-d', strtotime($request->end_date));
+    	if($user_id!='' && $startdate!='' && $enddate!=''){     
+           $Bamount     =  busyDatewise($user_id,$startdate,$enddate);
+          
+           $filename=$user_id.'.pdf'; 
+           //return view('printledgerbusy',compact('Bamount','user_type','user_id','account_name','clbal','startdate','enddate'));
+           $pdf = PDF::loadView('printledgerbusy',compact('Bamount','user_type','user_id','account_name','clbal','startdate','enddate'));  
+           $pdf->save(public_path('/images/download_ledger_pdf/'.$filename)); 
+           $user =  User::where('veepeeuser_id',$request->user_id)->first();
+           if($request->user_type == "buyer"){
+                $buyer_sms = getBuyers($user->id);
+            }else{
+                $buyer_sms = getSuplliers($user->id);
+            }
+            //send whatsapp notification
+                $whatsappTemplate = 'veepe_ord';//'veepee_ledger_pdf';
+                $whatsappParameters = array(
+                    array(
+                        "name" => "veepee_msg",
+                        "value" => url('/').'/images/download_ledger_pdf/'.$filename,
+                        ),
+                );
+            $res= whatsappCurl($whatsappTemplate,$buyer_sms->notify_whatsapp , $whatsappParameters);
+           // dd($res);
+               
+        }else{
+            return response()->json(['status'=>true,'message'=> 'Token not matched !','result'=>[]],200);
+        }
+    }
+    public function OrderInvoice(Request $request){
+        
+         
+      $order_id    = $request->order_id;
+    	 
+      
+    	if($order_id!=''){
+    	     
+             $data  = (new OrderRequester())->order($order_id);
+              
+           
+           $filename=$order_id.'.pdf'; 
+          $pdf = PDF::loadView('emails.invoicedownload',array('data' =>$data)); 
+            
+              return $pdf->download($filename);
+            //return view('emails.place_order')->with('data',$data); 
+    
+    //return PDF::loadView('print', $Bamount)->download('print.pdf');
+            
+        }else{
+            return response()->json(['status'=>true,'message'=> 'Order Id required!','result'=>[]],200);
+        }
+    }
+    public function WebsiteBanners(){
+        $info                               = SiteInfoModel::first();
+        if($info!=''){
+        $banner=explode(",",$info->home_banner);
+         
+        $baners=[];         
+                foreach($banner as $bnr){
+                    $baners[]=url('home_banner/')."/".$bnr;
+                }
+        
+        $result                             = [];
+        
+         
+         
+        $result['website_banners']                    = $baners;
+         
+        $result['banner_link']                    = $info->banner_link;
+        
+        return response()->json(['status'=>true,'message'=>'Success','result'=>$result],201);
+        }else{
+        return response()->json(['status'=>true,'message'=> 'Data not found','result'=>[]],201);    
+        }
+    }
+    
+    //Branches List 
+    public function branches(Request $request){
+        $value      = $request->bearerToken();
+    	$id         = (new Parser())->parse($value)->getHeader('jti');
+    	$user_id    = Token::find($id)->user_id;
+    	if($user_id){
+    	    $userchk = getUser($user_id);
+            $result     = [];
+            $result     = BranchModel::where('status',1)->get();
+            
+            //$result   = DB::table('branches')->where('status',1)->get();;
+            //return response()->json(['status'=>true,'message'=> 'Success','result'=>$result],201);
+            if($result->isNotEmpty()){    
+                foreach($result as $key=>$value){
+                    if(isset($value->country->country)){
+                        $result[$key]['country_name']   = $value->country->country;
+                    }
+                    else{
+                        $result[$key]['country_name']   = '';
+                    }
+                    $result[$key]['state_name']     = $value->state->state_name;
+                    $result[$key]['city_name']      = $value->city->city_name;
+                    $remaining_pkt                  = OrderModel::where('branch_id',$value->id)->where('status','Confirm')->sum('remaining_pkt');
+                    $result[$key]['remaining_pkt']  = ($remaining_pkt > 0) ? $remaining_pkt : 0;
+                }
+                return response()->json(['status'=>true,'message'=> 'Success','active' => $userchk->status,'block' => $userchk->block,'result'=>$result,],201);
+            }
+            else{
+                return response()->json(['status'=>true,'message'=> 'Branch not available','result'=>[]],201);
+            }
+
+        }else{
+            return response()->json(['status'=>true,'message'=> 'Token not matched','result'=>[]],201);
+        }
+    }
+    
+    public function RBPackets(Request $request){
+        
+        /*
+        $orders                        =  OrderModel::where('buyer_id',59)->where('branch_id',12)->where('status','Confirm')->get();
+        $result['total_packets']       =  $orders->sum('pkt_cases');
+        $result['remaing_packets']     =  OrderDeliveryModel::whereIn('order_id',$orders->pluck('id'))->get()->sum('no_of_case');
+        return response()->json(['status'=>true,'message'=> 'Success','result'=>$result],200);
+        */
+        
+        $value      = $request->bearerToken();
+    	$id         = (new Parser())->parse($value)->getHeader('jti');
+    	$user_id    = Token::find($id)->user_id;
+    	
+    	if($user_id){
+    	    $userchk = getUser($user_id);
+    	    $type                          =  (strtolower($request->usertype) == 'buyer') ? 'buyer_id': 'supplier_id';
+    	    $branch_id                     =  $request->branch_id;
+    	    
+    	    $orders                        =  OrderModel::where($type,$user_id)->where('branch_id',$branch_id)->where('status','Confirm')->get();
+            $result['total_packets']       =  $orders->sum('pkt_cases');
+            
+            $result['remaing_packets']     =  OrderDeliveryModel::whereIn('order_id',$orders->pluck('id'))->get()->sum('no_of_case');
+            return response()->json(['status'=>true,'message'=> 'Success','active' => $userchk->status,'block' => $userchk->block,'result'=>$result],200);
+            
+        }else{
+            return response()->json(['status'=>true,'message'=> 'Token not matched','result'=>[]],200);
+        }
+    }
+    
+    // brand and transport list
+    public function brands(Request $request,BranchModel $info){
+        $value = $request->bearerToken();
+    	$id = (new Parser())->parse($value)->getHeader('jti');
+    	
+    	 $user_id = Token::find($id)->user_id;
+    	
+    	 
+    	if($user_id){
+    	      $validator = Validator::make($request->all(), [
+                                        'branch_id' => 'required'
+                                         
+                                    ]);
+                if($validator->fails()){
+                    $response['message'] = $validator->messages()->first();
+                   return response()->json(['response' => $response,'status' => false],401); 
+                } else {
+            //$data  =  SuppliersModels::select(DB::raw("group_concat(user_id) as user_id"))->where(['status'=>'1','branch_id'=>$request->branch_id])->get()->first();
+            $loginUser = getUser($user_id);
+    
+            $data  =  DB::table('suppliers')->select('user_id')->where(['status'=>'1','branch_id'=>$request->branch_id])->groupby('user_id')->get();
+            $user_ids=[];
+            if($data){
+                foreach($data as $data)
+                {
+                   $user_ids[]=$data->user_id; 
+                }
+            }
+              
+            //$ids= explode(',',$user_ids);
+                //print_r($user_id); die;
+            if($loginUser->user_type == "supplier"){
+                $brand_name = BrandModel::where('user_id',$user_id)->distinct('name')->get();
+            }else{
+                $brand_name = BrandModel::whereIn('user_id',@$user_ids)->distinct('name')->get();
+            }
+    
+            //$tranportData  =  TransportsModels::where(['status'=>'1'])->where('branch_id',$request->branch_id)->get();
+           
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Success',
+                'brands'=>$brand_name, 
+                'active' => $loginUser->status,
+                'block' => $loginUser->block,
+                //'tranportData'=>$tranportData,
+                ], 201);
+                }
+        }else{
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Token not matched', 
+                'brands'=>[], 
+                'tranportData'=>[],
+                ], 201);
+        }
+    }
+    
+    //suppliers and items list
+    public function Suppliers_old(Request $request,BrandModel $info){
+        $value = $request->bearerToken();
+    	$id = (new Parser())->parse($value)->getHeader('jti');
+    	$user_id = Token::find($id)->user_id;
+    	if($user_id){
+    	    $userchk = getUser($user_id);
+            $validator =   Validator::make($request->all(), [
+                'branch_id' => 'required',
+                'brand_id' => 'required',
+              ]);
+           
+            if($validator->fails()){           
+                 return response()->json(['message' => $validator->messages()->first(),'status' => false],201); 
+            } else{ 
+                $branch_id = $request->branch_id;
+                $brand_id  = $request->brand_id;
+                $suplliers =[];
+                $suplliers  = DB::table('suppliers')
+                                ->join('users', 'users.id', '=', 'suppliers.user_id')
+                                ->leftjoin('brands', 'brands.user_id', '=', 'suppliers.user_id')
+                                ->leftjoin('items', 'items.brand_id', '=', 'brands.id')
+                              /*  ->join('countries', 'countries.id', '=', 'suppliers.country_id')*/
+                                ->join('states', 'states.id', '=', 'suppliers.state_id')
+                                ->join('cities', 'cities.id', '=', 'suppliers.city_id')
+                               // ->join('cities as cty', 'cty.id', '=', 'suppliers.station_id')
+                                ->where('items.status', '=', 1)
+                                ->where('brands.id',$brand_id)
+                                ->where('users.status', '=', 1)
+                                ->get(['suppliers.*','states.state_name','cities.city_name','users.*']);              
+                $items =ItemModel::where(['status'=>'1','brand_id'=>$brand_id])->get();       
+                return response()->json([
+                                    'status'=>true,
+                                    'message'=> 'Success',
+                                    'suplliers'=>$suplliers, 
+                                    'file_url' => url('catalog'),
+                                    'active' => $userchk->status,
+                                    'block' => $userchk->block,
+                                    'items'=>$items,
+                                    ], 201);
+            }
+        }
+        else{
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Token not matched', 
+                'suplliers'=>[], 
+                'items'=>[],
+                ], 201);
+            }
+    }
+
+    public function Suppliers(Request $request,BrandModel $info){
+        $value = $request->bearerToken();
+    	$id = (new Parser())->parse($value)->getHeader('jti');
+    	$user_id = Token::find($id)->user_id;
+    	if($user_id){
+    	    $userchk = getUser($user_id);
+            $validator =   Validator::make($request->all(), [
+                'branch_id' => 'required',
+                'brand_id' => 'required',
+              ]);
+           
+            if($validator->fails()){           
+                 return response()->json(['message' => $validator->messages()->first(),'status' => false],201); 
+            } else{ 
+                $branch_id = $request->branch_id;
+                $brand_id  = $request->brand_id;
+                $suplliers =[];
+                $suplliers  = DB::table('suppliers')
+                                ->join('users', 'users.id', '=', 'suppliers.user_id')
+                                ->leftjoin('brands', 'brands.user_id', '=', 'suppliers.user_id')
+                                ->leftjoin('items', 'items.brand_id', '=', 'brands.id')
+                              /*  ->join('countries', 'countries.id', '=', 'suppliers.country_id')*/
+                                ->join('states', 'states.id', '=', 'suppliers.state_id')
+                                ->join('cities', 'cities.id', '=', 'suppliers.city_id')
+                               // ->join('cities as cty', 'cty.id', '=', 'suppliers.station_id')
+                                ->where('items.status', '=', 1)
+                                ->where('brands.id',$brand_id)
+                                ->where('users.status', '=', 1)
+                                ->first(['suppliers.*','states.state_name','cities.city_name','users.*']);
+                if($suplliers){
+                    $brands = BrandModel::where('user_id', $suplliers->user_id)->get()->toArray();
+                }else{
+                    $brands = '';
+                }
+                
+                if($brands){
+                    $brandIds = array_column($brands, 'id');
+                }else{
+                    $brandIds = [];
+                }
+                
+                //print_r($brandIds); die;             
+                $items =ItemModel::where(['items.status'=>'1'])->whereIn('items.brand_id', $brandIds)
+                ->leftjoin('brands', 'brands.id', '=', 'items.brand_id')
+                ->get(['brands.name as brand_name','items.*']);       
+                return response()->json([
+                                    'status'=>true,
+                                    'message'=> 'Success',
+                                    'suplliers'=>$suplliers, 
+                                    'file_url' => url('catalog'),
+                                    'active' => $userchk->status,
+                                    'block' => $userchk->block,
+                                    'items'=>$items,
+                                    ], 201);
+            }
+        }
+        else{
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Token not matched', 
+                'suplliers'=>[], 
+                'items'=>[],
+                ], 201);
+            }
+    }
+
+    // Get Transport
+    public function transports(Request $request){
+        $value = $request->bearerToken();
+    	$id = (new Parser())->parse($value)->getHeader('jti');
+    	$user_id = Token::find($id)->user_id;
+    	if($user_id){
+    	    $userchk = getUser($user_id);
+            $validator =   Validator::make($request->all(), [
+                'branch_id' => 'required',
+              ]);
+           
+            if($validator->fails()){           
+                 return response()->json(['message' => $validator->messages()->first(),'status' => false],201); 
+            } else{ 
+                $tranportData  =  TransportsModels::where(['status'=>'1'])->where('branch_id',$request->branch_id)->get();  
+                return response()->json([
+                                    'status'=>true,
+                                    'message'=> 'Success',
+                                    'tranports'=>$tranportData, 
+                                    'file_url' => url('catalog'),
+                ], 201);
+            }
+        }
+        else{
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Token not matched', 
+                'tranports'=>[], 
+                ], 201);
+            }
+    }
+
+    public function createTransports(Request $request){
+        $value = $request->bearerToken();
+    	$id = (new Parser())->parse($value)->getHeader('jti');
+    	$user_id = Token::find($id)->user_id;
+    	if($user_id){
+    	    $userchk = getUser($user_id);
+            $validator =   Validator::make($request->all(), [
+                'branch_id' => 'required',
+                'gst' => 'required',
+                //'gst'=>'required|unique:transports',
+                'transport_name' => 'required',
+                'contact_mobile' => 'required',
+                'contact_person' => 'required',
+              ]);
+           
+            if($validator->fails()){           
+                 return response()->json(['message' => $validator->messages()->first(),'status' => false],201); 
+            } else{ 
+                $tranportData = TransportsModels::where('gst', $request->gst)->first();
+                if($tranportData){
+                    return response()->json([
+                        'status'=>false,
+                        'message'=> "GSTN Number already exist's!!", 
+                        'data'=>$tranportData, 
+                        ], 200);
+                 }
+                
+                $productCategory = TransportsModels::create(
+                        [
+                            'branch_id' => $request->branch_id,
+                            'transport_name'=>$request->transport_name,
+                            'gst'=>$request->gst,
+                            //'address'=>$request->address,
+                            'contact_person'=>$request->contact_person,
+                            'contact_mobile'=>$request->contact_mobile,
+                            'status'=>1,
+                            'created_by'=>$user_id
+                        ]
+                    );  
+                return response()->json([
+                                    'status'=>true,
+                                    'message'=> 'Transport Successfully Added!!',
+                                    'data'=>$productCategory,
+                ], 201);
+            }
+        }
+        else{
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Token not matched', 
+                'tranports'=>[], 
+                ], 201);
+            }
+    }
+    
+    // check buyer limit 
+    public function checkBuyerCreditLimit(Request $request){
+        $value = $request->bearerToken();
+    	$id = (new Parser())->parse($value)->getHeader('jti');
+    	$user_id = Token::find($id)->user_id;
+    	if($user_id){
+    	    $userchk = getUser($user_id);
+            $validator =   Validator::make($request->all(), [
+                'user_id' => 'required',
+                'user_type' => 'required',
+              ]);
+            
+        if($validator->fails()){           
+                 return response()->json(['message' => $validator->messages()->first(),'status' => false],201); 
+            } else{ 
+                $data = [];
+                if($request->user_type =='buyer'){
+                    $BuyerModel = BuyerModel::where('user_id',$request->user_id)->first();
+                    $order_deatils = OrderModel::where(['buyer_id'=>$request->user_id,'status'=>'Processing'])->sum('order_amount');
+                    $remaining_limit = $BuyerModel->credit_limit - $order_deatils;
+                    $data['credit_limit']= (string)$BuyerModel->credit_limit;
+                    $data['remaining_limit']= (string)$remaining_limit;
+                    $data['hold_amount']=  (string)$order_deatils;
+                    $data['busy_ledger_amount']= '20000';
+                    $msg = 'Limit Details';
+                }else{
+                    $msg = "invalid request";
+                }           
+                return response()->json([
+                    'status'=>true,
+                    'message'=> $msg, 
+                    'limitDetails'=>$data, 
+                    'active' => $userchk->status,
+                    'block' => $userchk->block,
+                    ], 201);
+            }
+        }else{
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Token not matched', 
+                'limitDetails'=>[], 
+                ], 201);
+        }
+    }
+
+    public function rating(Request $request){
+        $value = $request->bearerToken();
+        $id = (new Parser())->parse($value)->getHeader('jti');
+        $user = Token::find($id);
+        $user_id = @$user->user_id;
+        $msg='';
+        if($user_id){
+            $userchk = getUser($user_id);
+           $order =  OrderModel::where('id',$request->order_id)->first();
+               if($order){
+                   $data = array(
+                            'user_id' => $user_id,
+                            'brand_id' => $order->brand_id,
+                            'order_id' => $request->order_id,
+                            'rating' =>  $request->rating,
+                        );
+                    $res = RatingModel::create($data);
+
+                    $msg = 'Rating has been  submitted successfully.';
+                        return response()->json(['message'=> $msg,
+                        'status' => true,   
+                        'active' => $userchk->status,
+                        'block' => $userchk->block,
+                    ],200); 
+                } else {
+                    return response()->json([
+                        'status'=>true,
+                        'message'=> 'Order Id not found.', 
+                        'block' => $userchk->block, 
+                        'active' => $userchk->status,
+                        'limitDetails'=>[], 
+                    ], 201);
+                }
+            
+
+        } else{
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Token not matched', 
+                'limitDetails'=>[], 
+            ], 201);
+        }
+    }
+    
+    public function enquiries(Request $request){
+        $value      = $request->bearerToken();
+        $id         = (new Parser())->parse($value)->getHeader('jti');
+        $user       = Token::find($id);
+        $user_id    = @$user->user_id;
+        if($user_id){
+            $userchk = getUser($user_id);
+           $data = array('user_id'=>$user_id,'category'=>$request->category,'name'=>$request->name,'phone'=>$request->phone,'status'=>1);
+            //'reply' => 'Your feedback has been submitted successfully. We will get back to you soon.', 
+            $res = EnquiryModel::create($data);
+            return response()->json(['message'=>'Your feedback has been  submitted successfully.','block' => $userchk->block, 
+                        'active' => $userchk->status,'status' => true],201); 
+        } else{
+            return response()->json(['status'=>true,'message'=> 'Token not matched'], 200);
+        }
+    }
+    
+    public function getenquirybyuserid(Request $request, $user_id){
+        $value = $request->bearerToken();
+        $id = (new Parser())->parse($value)->getHeader('jti');
+        $user = Token::find($id);
+        $user_id = @$user->user_id;
+
+        if($user_id){
+            $userchk = getUser($user_id);
+            $result = [];
+            $enquiries  =  EnquiryModel::where('user_id',$user_id)->get();
+           foreach($enquiries as $row){
+               $result[]['category'] = $row->category;
+               $result[]['content'] = $row->content;
+               $result[]['reply'] = $row->reply;
+             
+           }
+            
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Success',
+                'result'=>$result, 
+                'block' => $userchk->block, 
+                'active' => $userchk->status,
+                ], 201);
+        } else {
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Token not matched', 
+                'result'=>[],
+                ], 201);
+        }
+    }
+
+    public function enquiriesdata(Request $request){
+        $value      = $request->bearerToken();
+        $id         = (new Parser())->parse($value)->getHeader('jti');
+        $user       = Token::find($id);
+        $user_id    = @$user->user_id;
+        $enqData =  EnquiryDataModel::orderBy('id', 'desc')->first();
+        
+        if($enqData){
+            
+            $array  = array_map('intval', str_split($enqData->id));
+            $arrayCount = count($array);
+            if($arrayCount == 1){
+                $enq_id = 'C-000'.($enqData->id+1);
+            }else if($arrayCount == 2){
+                $enq_id = 'C-00'.($enqData->id+1);
+            }else if($arrayCount == 3){
+                $enq_id = 'C-0'.($enqData->id+1);
+            }else{
+                $enq_id = 'C-'.($enqData->id+1);
+            }
+            
+        }else{
+            $enq_id = 'C-0001';
+        }
+        if($user_id){
+            $userchk = getUser($user_id);
+           $data = array('user_id'=>$user_id,'per_name'=>$request->per_name,'per_mobile'=>$request->per_mobile,'per_query'=>$request->per_query,'firm_name'=>$request->firm_name,'prob_desc'=>$request->prob_desc,'enq_status'=>"pending",'enq_id'=>$enq_id);
+            //'reply' => 'Your feedback has been submitted successfully. We will get back to you soon.', 
+            $res = EnquiryDataModel::create($data);
+
+            foreach ($request->per_attachment as $row) {
+                $image = $this->createImageFromBase64($row['Links']);
+                EnquiryGalleryModel::create(['enquiries_id' =>  $res['id'], 'image_name'=> $image]);    
+            }
+
+            return response()->json(['message'=>'Your feedback has been submitted successfully.','block' => $userchk->block, 'active' => $userchk->status,'status' => true],200); 
+        } else{
+            return response()->json(['status'=>true,'message'=> 'Token not matched'], 200);
+        }
+    }
+
+    protected function createImageFromBase64($image){
+        $file_data = $image;
+        $file_name = time().''.uniqid() . '.png'; //generating unique file name;
+        $destinationPath =public_path('/images/enquiry_request');
+        if ($file_data != "") { // storing image in storage/app/public Folder
+           // Storage::disk('public')->put($file_name, base64_decode($file_data));
+            File::put($destinationPath. '/' . $file_name, base64_decode($file_data));
+            return $file_name;
+        }
+     }
+
+    public function getenquirdataybyuserid(Request $request){
+        $value = $request->bearerToken();
+        $id = (new Parser())->parse($value)->getHeader('jti');
+        $user = Token::find($id);
+        $user_id = @$user->user_id;
+
+        if($user_id){
+            $userchk = getUser($user_id);
+            $enquiries  =  EnquiryDataModel::where('user_id',$user_id)->orderBy('id', 'DESC')->get();
+
+            foreach($enquiries as $key=>$value){
+                $images = EnquiryGalleryModel::where('enquiries_id',$value['id'])->get();
+                $Gimages=[];
+                if($images){
+                    foreach ($images as $key1=>$row) {
+                
+                        $Gimages[]=url('/images/enquiry_request/'.$row['image_name']);    
+                    }
+                }
+                
+                $enquiries[$key]['image'] = $Gimages;
+                $enquiries[$key]['enq_cons_id'] = 'C-000'.$value['id'];
+            }
+            
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Success',
+                'result'=>$enquiries, 
+                'block' => $userchk->block, 
+                'active' => $userchk->status,
+                ], 200);
+        } else {
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Token not matched', 
+                'result'=>[],
+                ], 201);
+        }
+    }
+
+    public function updateEnquiry(Request $request, $id){
+        $enquiries =  EnquiryDataModel::where('id', $id)->first();
+        
+        if($enquiries) {
+            $enquiries->satisfy = $request->satisfy;
+            $enquiries->enq_status = "closed";
+            $enquiries->save();
+
+            return response()->json([
+                'status' => true,
+                'message' => "Record Updates Successfully!!",
+            ], 200);
+        } else {
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Token not matched', 
+                'result'=>[],
+                ], 201);
+        }
+        
+     }
+
+    public function getRatingbyuserid(Request $request, $brand_id){
+        $value = $request->bearerToken();
+        $id    = (new Parser())->parse($value)->getHeader('jti');
+        $user  = Token::find($id);
+        $user_id = @$user->user_id;
+
+        if($user_id){
+            $userchk = getUser($user_id);
+            $result = [];
+            $rating  =  RatingModel::where('brand_id',$brand_id)->where('status',1)->get();
+            $ratingcount  =  RatingModel::where('brand_id',$brand_id)->where('status',1)->count();
+            if($ratingcount == 0){
+                $result['rating'] = 0;
+            } else {
+                $result['rating'] = ceil($rating->sum('rating')/$ratingcount);
+            }
+            
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Success',
+                'result'=>$result, 
+                'block' => $userchk->block, 
+                'active' => $userchk->status,
+                ], 201);
+        } else {
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Token not matched', 
+                'result'=>[],
+                ], 201);
+        }
+    }
+    
+    public function site_info(){
+        $result                             = [];
+        $info                               = SiteInfoModel::first();
+        /*
+        $result['email']                    = $info->email;
+        $result['name']                     = $info->name;
+        $result['address']                  = $info->address;
+        $result['phone']                    = $info->phone;
+        */
+        $result['dir']                      = url('catalog/');
+        $result['image']                    = ['supplier'=>$info->tnc_supplier,'buyer'=>$info->tnc_buyer,'about_us'=>$info->about_us,'home'=>$info->home,'profile'=>$info->profile];
+        $result['min_order_amount']         = $info->min_order_amount;
+        $result['privacy_policy']           = url('privacy-policy');
+        $result['max_order_dispatch_day']   = $info->max_order_dispatch_day;
+        /*
+        $result['email']                    = $info->email;
+        $result['name']                     = $info->name;
+        $result['address']                  = $info->address;
+        $result['phone']                    = $info->phone;
+        $result['tnc_supplier']             = url('catalog/'.$info->tnc_supplier);
+        $result['tnc_buyer']                = url('catalog/'.$info->tnc_buyer);
+        $result['about_us']                 = url('catalog/'.$info->about_us);
+        $result['home']                     = url('catalog/'.$info->home);
+        $result['profile']                  = url('catalog/'.$info->profile);
+        $result['min_order_amount']         = $info->min_order_amount;
+        $result['max_order_dispatch_day']   = $info->max_order_dispatch_day;
+        */
+        
+        return response()->json(['status'=>true,'message'=>'Success','result'=>$result],201);
+    }
+    
+    public function SiteUrls(){
+        $result                             = [];
+        $info                               = SiteInfoModel::first();
+         
+         
+        $result['branch_url']                    = $info->branch_url;
+        $result['ourcontact']                    = $info->contact_url;
+        $result['website_url']                    = $info->website_url;
+        
+        return response()->json(['status'=>true,'message'=>'Success','result'=>$result],201);
+    }
+    
+    
+    
+    public function Sitebankinfo(){
+        $result                             = [];
+        $info                               = BankdetailModel::first();
+         
+         
+        $result['field1']                    = $info->field1;
+        $result['field1_value']                    = $info->field1_value;
+        $result['field2']                    = $info->field2;
+        $result['field2_value']                    = $info->field2_value;
+        $result['field3']                    = $info->field3;
+        $result['field3_value']                    = $info->field3_value;
+        $result['field4']                    = $info->field4;
+        $result['field4_value']                    = $info->field4_value;
+        $result['field5']                    = $info->field5;
+        $result['field5_value']                    = $info->field5_value;
+        $result['field6']                    = $info->field6;
+        $result['field6_value']                    = $info->field6_value;
+         
+        
+        return response()->json(['status'=>true,'message'=>'Success','result'=>$result],201);
+    }
+    public function getHotelLink(){
+        $result                             = [];
+        $info                               = SiteInfoModel::first();
+        $result   = $info->hotel_url;
+        return response()->json(['status'=>true,'message'=>'Success','result'=>$result],201);
+    }
+    
+    // FCM notification list
+    public function fcmnotificationlist(Request $request){
+        
+    	    $value = $request->bearerToken();
+        $id    = (new Parser())->parse($value)->getHeader('jti');
+        $user  = Token::find($id);
+        $user_id = @$user->user_id;
+        $amountdata=[];
+        $approvaldata=[];
+        if($user_id){ 
+            $dt =date('Y-m-d');
+            $data  =  DB::table('fcm_notification')->select('*')->where('user_id',$request->user_id)->where('created_at','>=',date('Y-m-d h:i:s',strtotime("$dt -6 day")))->where('title','!=','Pending approval')->limit('7')->groupBy('created_at')->get();
+            $data2  =  DB::table('fcm_notification')->select('*')->where('user_id',$request->user_id)->where('created_at','>=',date('Y-m-d h:i:s',strtotime("$dt -6 day")))->where('title','=','Pending approval')->groupBy('created_at')->get();
+            $prevdate='';
+            foreach($data as $dt){
+               if($prevdate==date('d-m-Y h:i A', strtotime($dt->created_at))){
+                   
+               }else{
+                $amountdata[]=["id"=> $dt->id,
+            "user_type"=> $dt->user_type,
+            "user_id"=> $dt->user_id,
+            "title"=> $dt->title,
+            "notification"=> $dt->notification,
+            "read_unread"=> $dt->read_unread,
+            "created_at"=> date('d-m-Y h:i A', strtotime($dt->created_at)),
+            "updated_at"=> $dt->updated_at];
+               }
+               $prevdate=date('d-m-Y h:i A', strtotime($dt->created_at)); 
+            }
+            $prevdate='';
+            foreach($data2 as $dt){
+                if($prevdate==date('d-m-Y h:i A', strtotime($dt->created_at))){
+                   
+               }else{
+                $approvaldata[]=["id"=> $dt->id,
+            "user_type"=> $dt->user_type,
+            "user_id"=> $dt->user_id,
+            "title"=> $dt->title,
+            "notification"=> $dt->notification,
+            "read_unread"=> $dt->read_unread,
+            "created_at"=> date('d-m-Y h:i A', strtotime($dt->created_at)),
+            "updated_at"=> $dt->updated_at];
+               }
+                $prevdate=date('d-m-Y h:i A', strtotime($dt->created_at)); 
+            }
+            
+            $datas['amountdata']=$amountdata;
+            $datas['approvaldata']=$approvaldata;
+           
+           if(count($datas)>0){
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Success',
+                'data'=>$datas, 
+                 
+                ], 201);
+        }else{
+            return response()->json([
+                'status'=>false,
+                'message'=> 'No Data found', 
+                'data'=>$datas, 
+                 
+                ], 201);
+        }
+        }
+            else {
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Token not matched', 
+                'result'=>[],
+                ], 201);
+        }
+        
+    }
+    
+    public function readnotification(Request $request){
+        
+    	    $value = $request->bearerToken();
+        $id    = (new Parser())->parse($value)->getHeader('jti');
+        $user  = Token::find($id);
+        $user_id = @$user->user_id;
+
+        if($user_id){ 
+            $data  =  DB::table('fcm_notification')->select('*')->where('id',$request->id)->get();
+           
+           if(count($data)>0){
+            DB::table('fcm_notification')
+                ->where('id', $request->id)
+                ->update(['read_unread' => $request->read_unread]);
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Success',
+                ], 201);
+        }else{
+            return response()->json([
+                'status'=>true,
+                'message'=> 'No Data found', 
+                'data'=>[], 
+                 
+                ], 201);
+        }
+        }
+            else {
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Token not matched', 
+                'result'=>[],
+                ], 201);
+        }
+        
+    }
+
+     // brand and transport list
+     public function searchBuyers(Request $request){
+        $value = $request->bearerToken();
+    	$id = (new Parser())->parse($value)->getHeader('jti');
+    	
+    	 $user_id = Token::find($id)->user_id;
+    	
+    	 
+    	if($user_id){
+            $validator = Validator::make($request->all(), [
+                                    'search_buyer_name' => 'required'
+                                ]);
+            if($validator->fails()){
+                $response['message'] = $validator->messages()->first();
+                return response()->json(['response' => $response,'status' => false],401); 
+            } else {
+                if ($request->search_buyer_name) {
+                    $data = DB::table('users')->Join('buyers', 'users.id', '=', 'buyers.user_id')
+                    ->leftJoin('cities', 'buyers.city_id', '=', 'cities.id')
+                    ->leftJoin('states', 'buyers.state_id', '=', 'states.id')
+                    ->select(['users.status','users.name as firm_name','users.email','users.veepeeuser_id','users.user_type','users.email','users.gst','buyers.user_id','buyers.address','buyers.account','cities.city_name as station','states.state_name','buyers.order_contact','buyers.owner_name','buyers.owner_contact','buyers.order_name'])
+                    ->where(function ($q) use ($request) {
+                        $q->where('users.name', 'LIKE', "%$request->search_buyer_name%")
+                            ->orWhere('users.veepeeuser_id', 'LIKE', "%$request->search_buyer_name%");
+                    })
+                    ->where('users.status', '=', 1)
+                    ->where('users.user_type', '=', "buyer")
+                    // ->where('users.name', 'LIKE', "%$request->search_buyer_name%")
+                    // ->orWhere('users.veepeeuser_id', 'LIKE', "%$request->search_buyer_name%")
+                    ->get();
+                }
+            
+                return response()->json([
+                    'status'=>true,
+                    'message'=> 'Success',
+                    'buyers'=>$data,
+                    ], 201);
+            }
+        }else{
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Token not matched', 
+                'brands'=>[], 
+                'tranportData'=>[],
+                ], 201);
+        }
+    }
+    public function getContactInfo(){
+            
+            $data = DB::table('contact_info')->get();
+            return response()->json([
+                'status'=>true,
+                'message'=> 'Success',
+                'result'=>$data, 
+                ], 200);
+    }
+    public function UpdateForcefully(){
+        $data = DB::table('settings')->select(['name','content','reason'])->where('name','UpdateForcefully')->get();
+        return response()->json([
+                'status'=>true,
+                'message'=> 'Success',
+                'result'=>$data, 
+                ], 200);
+    }
+
+}

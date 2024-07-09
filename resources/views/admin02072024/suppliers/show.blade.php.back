@@ -1,0 +1,268 @@
+@extends('layouts.admin')
+@section('content')
+
+<div class="card">
+    <div class="card-header">
+        {{ trans('global.show') }} {{ trans('cruds.supplier.title_singular') }}
+    </div>
+
+    <div class="card-body">
+        <div class="mb-2">
+            <table class="table table-bordered table-striped">
+                <tbody>
+                    <tr>
+                        <th>
+                          VEEPEE ID
+                        </th>
+                        <td>
+                            {{ $user->veepeeuser_id }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>
+                            Name
+                        </th>
+                        <td>
+                            {{ $user->name }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>
+                          Gender
+                        </th>
+                        <td>
+                            {!! $user->gender !!}
+                        </td>
+                    </tr>
+                    @if($user->profile_pic != '' || NULL)
+                    <tr>
+                        <th>
+                           Profile Picture
+                        </th>
+                        <td>
+                            <a href="{{url('profilepic/'.$user->profile_pic)}}" target="_blank"><img src="{{url('profilepic/'.$user->profile_pic)}}" width="150" height="150"></a>
+                        </td>
+                    </tr>
+                    @endif
+                    <tr>
+                        <th>
+                           Branch
+                        </th>
+                        <td>
+                            {!! $user->supplier->branch->name !!}
+                        </td>
+                    </tr>
+                   
+                    <tr>
+                        <th>
+                           State
+                        </th>
+                        <td>
+                            {!! getState($user->supplier->state_id)->state_name !!}
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th>
+                           City
+                        </th>
+                        <td>
+                            {!! getCity($user->supplier->city_id)->city_name !!}
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th>
+                           Address
+                        </th>
+                        <td>
+                            {!! $user->supplier->address !!}
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th>
+                           GST
+                        </th>
+                        <td>
+                            {!! $user->supplier->gst !!}
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th>
+                           Account
+                        </th>
+                        <td>
+                            {!! $user->supplier->account !!}
+                        </td>
+                    </tr>
+
+                   
+
+                    <tr>
+                        <th>
+                           Owner Name
+                        </th>
+                        <td>
+                            {!! $user->supplier->owner_name !!}
+                        </td>
+                    </tr>
+
+
+                    <tr>
+                        <th>
+                           Owner Contact
+                        </th>
+                        <td>
+                            {!! $user->supplier->owner_contact !!}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>
+                           Order Name
+                        </th>
+                        <td>
+                            {!! $user->supplier->order_name !!}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>
+                           Order Contact
+                        </th>
+                        <td>
+                            {!! $user->supplier->order_contact !!}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>
+                           Sister Firm
+                        </th>
+                        <td>
+                            <?php $firms =  explode(',',$user->supplier->sister_firm);
+                                foreach($firms as $row){
+                                    $user = getUser($row);
+                                    echo @$user->name. '/'. @$user->veepeeuser_id.' , ';
+                                }
+                            
+                            ?>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <th>
+                           Category
+                        </th>
+                        <td>
+                            {!! $user->supplier->category !!}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>
+                           Market
+                        </th>
+                        <td>
+                            {!! $user->supplier->market !!}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>
+                           Design
+                        </th>
+                        <td>
+                            {!! $user->supplier->design !!}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>
+                           Pattern
+                        </th>
+                        <td>
+                            {!! $user->supplier->pattern !!}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>
+                           Minimum Quantity
+                        </th>
+                        <td>
+                            {!! $user->supplier->min_quantity !!}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>
+                           Packing
+                        </th>
+                        <td>
+                            {!! $user->supplier->packing !!}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>
+                           Fabric
+                        </th>
+                        <td>
+                            {!! $user->supplier->fabric !!}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>
+                           Discount
+                        </th>
+                        <td>
+                            {!! $user->supplier->discount !!} %
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>
+                           Notify Email
+                        </th>
+                        <td>
+                            {{ $user->supplier->notify_email }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>
+                           Notify SMS
+                        </th>
+                        <td>
+                            {{ $user->supplier->notify_sms }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>
+                           Notify Whatsapp
+                        </th>
+                        <td>
+                            {{ $user->supplier->notify_whatsapp }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>
+                           catalog
+                        </th>
+                        <td>
+                            @if($user->supplier->catalog != NULL || '')
+                           <a href="{{url('catalog/'.$user->supplier->catalog)}}" target="_blank">Catalog</a>
+                           @endif
+                        </td>
+                    </tr>
+                   
+                </tbody>
+            </table>
+            <a style="margin-top:20px;" class="btn btn-default" href="{{ url()->previous() }}">
+                {{ trans('global.back_to_list') }}
+            </a>
+        </div>
+
+        <nav class="mb-3">
+            <div class="nav nav-tabs">
+
+            </div>
+        </nav>
+        <div class="tab-content">
+
+        </div>
+    </div>
+</div>
+@endsection

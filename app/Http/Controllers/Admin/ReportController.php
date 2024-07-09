@@ -1,0 +1,639 @@
+<?php
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\OrderModel;
+use App\Models\TransportsModels;
+use App\Models\OrderTrackingModel;
+use App\Models\OrderDeliveryModel;
+use App\Models\SupplierBillModel;
+use App\Models\CourierModel;
+use App\Models\BranchModel;
+use App\Models\BrandModel;
+use App\Models\FcmModel;
+
+use Illuminate\Support\Facades\Validator;
+use App\Http\Controllers\Traits\PushNotificationTrait;
+use Gate;
+use Auth;
+use Mail;
+use PDF;
+use DB;
+use App\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\View;
+use Symfony\Component\HttpFoundation\Response;
+ 
+class ReportController extends Controller{
+    
+    use PushNotificationTrait;
+    
+    public $data    = null;
+  
+    public function index(Request $request){
+        $headers = array(
+            "Content-type" => "text/csv",
+            "Content-Disposition" => "attachment; filename=report.csv",
+            "Pragma" => "no-cache",
+            "Cache-Control" => "must-revalidate, post-check=0, pre-check=0",
+            "Expires" => "0"
+        );
+          
+           
+          
+
+        abort_if(Gate::denies('report_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        $branches = BranchModel::where('status',1)->get();
+        if($request->all()){
+            \DB::enableQueryLog();
+            $orders1    = User::select('users.*', 'orders.*')->join("orders",function($join){
+                                $join->on("orders.supplier_id","=","users.id");
+                            }); 
+            
+             
+            
+                            
+            if($request->name != ''){
+                $orders1->where('users.name','like','%'.$request->name.'%');
+            }
+            if($request->account_number != ''){
+                $orders1->where('users.veepeeuser_id',$request->account_number);
+            }
+            if($request->branch != ''){
+                $orders1->where('orders.branch_id',$request->branch);
+            }
+            if($request->vporder_id != ''){
+                $orders1->where('orders.vporder_id',$request->vporder_id);
+            }
+            if($request->supplier_accept != ''){
+                $orders1->where('orders.supplier_accept',$request->supplier_accept)->where('orders.buyer_accept',0);
+            }
+            if($request->start_date != '' && $request->end_date != ''){
+               $orders1->where('orders.created_at','>=',date('Y-m-d 00:00:00',strtotime($request->start_date)))->where('orders.created_at','<=',date('Y-m-d 23:59:59',strtotime($request->end_date)));
+            }
+            if($request->start_due_date != '' && $request->end_due_date != ''){
+               $orders1->where('orders.orderlast_date','>=',date('Y-m-d 00:00:00',strtotime($request->start_due_date)))->where('orders.orderlast_date','<=',date('Y-m-d 23:59:59',strtotime($request->end_due_date)));
+            }
+            if($request->status != ''){
+                $orders1->where('orders.status',$request->status);
+            }
+            $order = $orders1->orderby('orders.created_at','desc')->wherein('orders.status',['Confirm','Cancelled','Completed','Processing'])->get();
+            if(count($order)<=0){
+                
+                $orders1    = User::select('users.*', 'orders.*')->join("orders",function($join){
+                                $join->on("orders.buyer_id","=","users.id");
+                            }); 
+            
+             
+            
+                            
+            if($request->name != ''){
+                $orders1->where('users.name','like','%'.$request->name.'%');
+            }
+            if($request->account_number != ''){
+                $orders1->where('users.veepeeuser_id',$request->account_number);
+            }
+            if($request->branch != ''){
+                $orders1->where('orders.branch_id',$request->branch);
+            }
+            if($request->vporder_id != ''){
+                $orders1->where('orders.vporder_id',$request->vporder_id);
+            }
+            if($request->supplier_accept != ''){
+                $orders1->where('orders.supplier_accept',$request->supplier_accept)->where('orders.buyer_accept',0);
+            }
+            if($request->start_date != '' && $request->end_date != ''){
+               $orders1->where('orders.created_at','>=',date('Y-m-d 00:00:00',strtotime($request->start_date)))->where('orders.created_at','<=',date('Y-m-d 23:59:59',strtotime($request->end_date)));
+            }
+            if($request->start_due_date != '' && $request->end_due_date != ''){
+               $orders1->where('orders.orderlast_date','>=',date('Y-m-d 00:00:00',strtotime($request->start_due_date)))->where('orders.orderlast_date','<=',date('Y-m-d 23:59:59',strtotime($request->end_due_date)));
+            }
+            if($request->status != ''){
+                $orders1->where('orders.status',$request->status);
+            }
+            $order = $orders1->orderby('orders.created_at','desc')->wherein('orders.status',['Confirm','Cancelled','Completed','Processing'])->get();
+                
+            }
+           
+            if($request->export == 'download'){
+                /*
+                $columns = array('vporder_id','buyer_id','supplier_id','branch_id','brand_id','marka','transport_one_id','transport_two_id','supply_start_date',
+                'orderlast_date','station','pkt_cases','remaining_pkt','order_amount','remaining_amount','supplier_accept','buyer_accept','veepee_invoice_number',
+                'invoice','status','order_date','merchandiser_name');
+                */
+                
+                $columns = array('Sr. No.','VPOrder Id','Buyer Acc No','Buyer/Merchandiser','Buyer Id','Supplier Acc No','Supplier Id','Branch Id','Brand Id','Marka','Order Date','Transport One Id','Transport Two Id','Supply Start Date',
+                'Orderlast Date','Station','Pkt Cases','Remaining Pkt','Order Amount','Remaining Amount','Color Size Range Etc','Case No','Remark By Customer','Optional','Item','Supplier Accept','Buyer Accept','Veepee Invoice Number',
+                'Invoice','Status','Remark','Remarked By','Order By','Remark Date','Merchandiser Name');
+                //$order = $orders1->orderby('orders.created_at','desc')->get();
+				
+                //dd($order->toArray());
+                //exit;
+                $callback = function() use ($order, $columns) {
+                    $file = fopen('php://output', 'w');
+                    fputcsv($file, $columns);
+                    $n=1;
+                    $TRPCase   = null ;
+                    foreach($order->unique('vporder_id') as $row) {
+                        $items = DB::table('order_items')->select('name')->where('order_id',$row->id)->get();
+                         if(isset($items)){
+                             foreach($items as $itmrow){
+                             $items=$itmrow->name." ";
+                             }
+                    }
+                        $RPCase   = $row->pkt_cases - (delivered_cases($row->id) ?? 0);
+                                    $TRPCase += $RPCase;
+                        fputcsv($file, array(
+                            $n,
+                            $row->vporder_id,
+                            @getUser($row->buyer_id)->veepeeuser_id,
+                           @$row->merchandiser_name?? getUser($row->buyer_id)->name,
+                             
+                            @getUser($row->buyer_id)->name,
+                            @getUser($row->supplier_id)->veepeeuser_id,
+                            @getUser($row->supplier_id)->name,
+                            @getBranch($row->branch_id),
+                            @getBrand($row->brand_id),
+                            $row->marka,
+                            $row->order_date,
+                            @getTransport($row->transport_one_id),
+                            @getTransport($row->transport_two_id),
+                            $row->supply_start_date,
+                            $row->orderlast_date,
+                            // @getCity($row->station),
+                            $row->station,
+                            $row->pkt_cases,
+                            @$RPCase,
+                            $row->order_amount,
+                            ($row->order_amount - remaing_amount($row->id)),
+                            $row->color_size_range_etc,
+                            $row->case_no,
+                            $row->remark_by_customer,
+                            $row->optional,
+                            @$items,
+                                
+                            ($row->supplier_accept == 0 || $row->supplier_accept == null ) ? 'Pending' : 'Accepted',
+                            ($row->buyer_accept == 0 || $row->buyer_accept == null) ? 'Pending' : 'Accepted',
+                            $row->veepee_invoice_number,
+                            $row->invoice,
+                            $row->status,
+                            //$row->reason.' By '.@getUser(ordercancelremark($row->id)->cancelled_by)->name.' Date '.date('Y-m-d', strtotime($row->updated_at)),
+                            (ordercancelremark($row->id)->reason??'').' By '.@getUser(ordercancelremark($row->id)->cancelled_by)->name.' Date '.date('Y-m-d', strtotime($row->updated_at)),
+                            @getUser(ordercancelremark($row->id)->cancelled_by)->name ?? '',
+                            $row->order_by,
+                            $row->updated_at,
+                            
+                            @getUser($row->users_id)->name ?? ''
+                        ));
+                        $n++;
+                    }
+                    fclose($file);
+              };
+                return \Response::stream($callback, 200, $headers);
+            }
+            $orders1->whereNull('orders.deleted_at');
+            //print_r( $orders1); die; 
+            $orders = $orders1->orderby('orders.created_at','desc')->wherein('orders.status',['Confirm','Cancelled','Completed','Processing'])->groupby('orders.vporder_id')->paginate(20); //dd($orders);
+            //dd(\DB::getQueryLog());
+            
+            return view('admin.reports.report', compact('orders','branches'));
+            
+        }else{
+            $orders = OrderModel::whereNull('orders.deleted_at')->wherein('status',['Confirm','Cancelled','Completed','Processing'])->orderby('orders.created_at','desc')->groupby('orders.vporder_id')->paginate(20);
+            return view('admin.reports.report', compact('orders','branches'));
+        }
+    }
+    
+    public function supplier_report(Request $request){
+        // send_sms('9625627912', 'hello saurabh');
+        /*https://stackoverflow.com/questions/48467363/call-to-undefined-method-illuminate-database-query-builderisempty-on-eager-loa*/
+        abort_if(Gate::denies('report_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        $headers = array(
+            "Content-type" => "text/csv",
+            "Content-Disposition" => "attachment; filename=report.csv",
+            "Pragma" => "no-cache",
+            "Cache-Control" => "must-revalidate, post-check=0, pre-check=0",
+            "Expires" => "0"
+        );
+        
+        $branches = BranchModel::where('status',1)->get();
+        if($request->all()){
+        //   print_r($request->all()); die;
+            $users1 = User::join('suppliers', 'users.id', '=', 'suppliers.user_id')
+            ->select('users.*', 'suppliers.*');
+            if($request->name != ''){
+                $users1->where('users.name','like','%'.$request->name.'%');
+            }
+
+            if($request->email != ''){
+               // print_r($request->email); die;
+                $users1->where('users.email',$request->email);
+            }
+
+            if($request->veepeeuser_id != ''){
+
+                $users1->where('users.veepeeuser_id',$request->veepeeuser_id);
+            }
+
+            if($request->gender != ''){
+                $users1->where('users.gender',$request->gender);
+            }
+
+            if($request->branch_id != ''){
+               
+                $users1->where('suppliers.branch_id',$request->branch_id);
+            }
+
+            if($request->status != ''){
+                $users1->where('users.status',$request->status);
+            }
+            $users1->orderby('users.created_at','desc');
+            
+            if($request->export == 'download'){
+                $columns  = array('Sr. No.','veepeeuser_id','name', 'email', 'number','gender','gst', 'user_type', 'branch_id','state_id', 'city_id', 'address','account', 'owner_name', 'owner_contact', 'order_name', 'order_contact', 'discount', 'notify_email', 'notify_sms', 'catalog', 'status');
+                $order    = $users1->get();
+                $callback = function() use ($order, $columns) {
+                $file   = fopen('php://output', 'w');
+                fputcsv($file, $columns);
+                $i =1;
+                foreach($order as $row) {
+                    fputcsv($file, array(
+                        $i,
+                        $row->veepeeuser_id,
+                        $row->name,
+                        $row->email,
+                        $row->number,
+                        $row->gender,
+                        $row->gst,
+                        $row->user_type,
+                        getBranch($row->branch_id),
+                        getState($row->state_id)->state_name,
+                        getCity($row->city_id)->city_name,
+                        $row->address,
+                        $row->account,
+                        $row->owner_name,
+                        $row->owner_contact,
+                        $row->order_name,
+                        $row->order_contact,
+                        $row->discount,
+                        $row->notify_email,
+                        $row->notify_sms,
+                        $row->catalog,
+                        user_status($row->status),
+                    ));
+                    $i++;
+                }
+                fclose($file);
+              };
+              return \Response::stream($callback, 200, $headers);
+            }
+            $users = $users1->paginate(20);
+           // echo '<pre>';print_r($users); die;
+            return view('admin.reports.supplier', compact('users','branches'));
+        } else {
+            $users =  User::where('user_type','supplier')->orderby('created_at','desc')->paginate(20);
+            return view('admin.reports.supplier', compact('users','branches'));
+            
+        }
+        
+    }
+    
+    public function buyer_report(Request $request){
+        // send_sms('9625627912', 'hello saurabh');
+        /*https://stackoverflow.com/questions/48467363/call-to-undefined-method-illuminate-database-query-builderisempty-on-eager-loa*/
+        abort_if(Gate::denies('report_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        $headers = array(
+            "Content-type" => "text/csv",
+            "Content-Disposition" => "attachment; filename=report.csv",
+            "Pragma" => "no-cache",
+            "Cache-Control" => "must-revalidate, post-check=0, pre-check=0",
+            "Expires" => "0"
+        );
+        
+        $user       =  Auth::user();
+         
+        
+        
+        $branches = BranchModel::where('status',1)->get();
+        if($request->all()){
+
+            $users1 = User::join('buyers','users.id','=','buyers.user_id')->select('users.veepeeuser_id','users.name','users.email','users.number','users.gender','users.user_type','buyers.city_id','buyers.state_id','users.status','buyers.address','buyers.account','buyers.gst','buyers.owner_name','buyers.owner_contact','buyers.order_name','buyers.order_contact','buyers.notify_email','buyers.notify_sms','buyers.credit_limit')->where('users.user_type','buyer');
+            
+
+            if($request->name != ''){
+                $users1->where('users.name','like','%'.$request->name.'%');
+            }
+
+            if($request->email != ''){
+                $users1->where('users.email',$request->email);
+            }
+
+            if($request->veepeeuser_id != ''){
+                $users1->where('users.veepeeuser_id',$request->veepeeuser_id);
+            }
+
+            if($request->gender != ''){
+                $users1->where('users.gender',$request->gender);
+            }
+
+            if($request->branch_id != ''){
+                $users1->where('suppliers.branch_id',$request->branch_id);
+            }
+
+            if($request->status != ''){
+                $users1->where('users.status',$request->status);
+            }
+            
+            $users1->orderby('users.created_at','desc');
+            
+            
+            
+            if($request->export == 'download'){
+                
+                //'branch_id',
+                
+                $columns = array('Sr. No.','veepeeuser_id','name','email','number','gender','gst','user_type','state_id','city_id','address','account','owner_name','owner_contact','order_name','order_contact','notify_email','notify_sms','credit_limit','status');
+                 
+                $order = $users1->get();
+                $callback = function() use ($order, $columns) {
+                    $file = fopen('php://output', 'w');
+                    fputcsv($file, $columns);
+                    $i=1;
+                    foreach($order as $row) {
+                         
+                        fputcsv($file, array(
+                           $i,
+                           $row->veepeeuser_id,
+                           $row->name,
+                           $row->email,
+                           $row->number,
+                           $row->gender,
+                           $row->gst,
+                           $row->user_type,
+                           //getBranch($row->branch_id),
+                           @getState($row->state_id)->state_name,
+                           @getCity($row->city_id)->city_name,
+                           $row->address,
+                           $row->account,
+                           $row->owner_name,
+                           $row->owner_contact,
+                           $row->order_name,
+                           $row->order_contact,
+                           $row->notify_email,
+                           $row->notify_sms,
+                           $row->credit_limit,
+                           user_status($row->status),
+                        ));
+                        
+                        
+                        $i++;
+                    }
+                    fclose($file);
+                    
+                };
+                return \Response::stream($callback,200,$headers);
+            }
+            $users = $users1->paginate(20);
+            //return view('admin.reports.buyer', compact('users','branches','user_type'));
+            return view('admin.reports.buyer', compact('users','branches'));
+        }else{
+            $users =  User::where('user_type','buyer')->orderby('created_at','desc')->paginate(20);
+            //return view('admin.reports.buyer', compact('users','branches','user_type'));
+            return view('admin.reports.buyer', compact('users','branches'));
+        }
+    }
+    
+    public function item_brand(){
+        return view('admin.reports.item_brand');
+    }
+    
+    public function brand_export(){
+        abort_if(Gate::denies('report_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        $headers = array(
+            "Content-type" => "text/csv",
+            "Content-Disposition" => "attachment; filename=report.csv",
+            "Pragma" => "no-cache",
+            "Cache-Control" => "must-revalidate, post-check=0, pre-check=0",
+            "Expires" => "0"
+        );
+        
+ 
+            $brand = User::join('brands', 'users.id', '=', 'brands.user_id')
+            ->select('users.*', 'brands.*');
+            
+            
+                $columns = array('Sr. No.','veepeeuser_id','name', 'status');
+                $brands = $brand->get();
+                $callback = function() use ($brands, $columns) {
+                  $file = fopen('php://output', 'w');
+                  fputcsv($file, $columns);
+                  $i=1;
+                  foreach($brands as $row) {
+                      fputcsv($file, array(
+                       $i,
+                       $row->veepeeuser_id,
+                       $row->name,
+                       $row->status,
+                      
+                     ));
+                     
+                     $i++;
+                  }
+                  fclose($file);
+              };
+              return \Response::stream($callback, 200, $headers);
+        
+            return redirect()->back();
+    }   
+    
+    public function item_export(){
+        abort_if(Gate::denies('report_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        $headers = array(
+            "Content-type" => "text/csv",
+            "Content-Disposition" => "attachment; filename=report.csv",
+            "Pragma" => "no-cache",
+            "Cache-Control" => "must-revalidate, post-check=0, pre-check=0",
+            "Expires" => "0"
+        );
+        
+ 
+            $brand = BrandModel::join('items', 'brands.id', '=', 'items.brand_id')
+            ->select('brands.name as brand_name', 'items.name as item_name', 'items.min_range as min_range', 'items.max_range as max_range', 'items.article_no as article_no',
+            'items.quantity as quantity', 'items.discount as discount', 'items.status as status');
+            
+            
+                $columns = array('Sr. No.','brand_name','item_name','min_range','max_range','article_no','quantity','discount', 'status');
+                $brands = $brand->get();
+                $callback = function() use ($brands, $columns) {
+                  $file = fopen('php://output', 'w');
+                  fputcsv($file, $columns);
+                    $i = 1;
+                  foreach($brands as $row) {
+                      fputcsv($file, array(
+                       $i,
+                       $row->brand_name,
+                       $row->item_name,
+                       $row->min_range,
+                       
+                       $row->max_range,
+                       $row->article_no,
+                       $row->quantity,
+                       
+                       $row->discount,
+                       $row->status,
+
+                      
+                     ));
+                     $i++;
+                  }
+                  fclose($file);
+              };
+              return \Response::stream($callback, 200, $headers);
+        
+            return redirect()->back();
+    }   
+    
+    public function cancel_rating(Request $request){
+        if($request->all()){
+            $suppliers = User::where('user_type','supplier')->where('veepeeuser_id','LIKE','%'.$request->veepeeuser_id.'%')->paginate(20);
+            return view('admin.cancel_rating',compact('suppliers'));
+        } else {
+            $suppliers = User::where('user_type','supplier')->paginate(20);
+            return view('admin.cancel_rating',compact('suppliers'));
+        }
+    }
+    
+    public function buyer_supplier(){
+        $data   =  array('buyers' => User::where('user_type','buyer')->get());
+         
+        return view('admin.reports.filter.index',$data);
+    }   
+    
+    public function buyerSupplierFilter(Request $request,User $user){
+        if($request->veepee != null || $request->firm != null){
+             
+            try{
+                $this->data =   $user->where('veepeeuser_id',$request->veepee)->first();
+                 
+                
+                 
+                if($this->data != null){
+                    $user_id= $this->data->id;
+                     $brands = BrandModel::where('user_id',$user_id)->paginate(50);
+                    return json_encode(['status'=>200,'success'=>true,'html'=>View::make('admin.reports.filter.'.$request->user,['data'=>$this->data,'brand'=>$brands])->render()]);
+                    //return view('admin.reports.filter.'.$request->user,['data'=>$this->data]);
+                }
+                return json_encode(['status'=>200,'success'=>false,'message'=>'No data found!']);
+            }catch(\Exception $e){ dd($e);
+                return json_encode(['status'=>200,'success'=>false,'message'=>'There is some issue, please check you entered correct inputs.']);
+            }
+        }
+        return json_encode(['status'=>200,'success'=>false,'message'=>'Please provide VeePee ID or Firm name !']);
+    }
+    
+//App Login Report
+public function apploginreport(Request $request){
+         
+        abort_if(Gate::denies('report_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        $headers = array(
+            "Content-type" => "text/csv",
+            "Content-Disposition" => "attachment; filename=report.csv",
+            "Pragma" => "no-cache",
+            "Cache-Control" => "must-revalidate, post-check=0, pre-check=0",
+            "Expires" => "0"
+        );
+        
+        $branches = BranchModel::where('status',1)->get();
+        if($request->all()){
+
+            /*$users1 = User::join('user_fcm_data','users.id','=','user_fcm_data.user_id')->select('users.*','user_fcm_data.*');*/
+           $users1 = User::join('user_fcm_data','users.id','=','user_fcm_data.user_id')->select('users.*','users.id as userid','user_fcm_data.*','user_fcm_data.created_at as createdat')->orderby('user_fcm_data.created_at','desc');
+
+            if($request->name != ''){
+                $users1->where('users.name','like','%'.$request->name.'%');
+            }
+
+            if($request->email != ''){
+                $users1->where('users.email',$request->email);
+            }
+
+            if($request->veepeeuser_id != ''){
+                $users1->where('users.veepeeuser_id',$request->veepeeuser_id);
+            }
+
+            if($request->gender != ''){
+                $users1->where('users.gender',$request->gender);
+            }
+
+            if($request->branch_id != ''){
+                $users1->where('suppliers.branch_id',$request->branch_id);
+            }
+
+            if($request->status != ''){
+                $users1->where('users.status',$request->status);
+            }
+            
+            if($request->is_login !=''){
+                $users1->where('user_fcm_data.is_login',$request->is_login);
+            }
+            $users1->orderby('users.created_at','desc');
+            
+            if($request->export == 'download'){
+                //'branch_id',
+                $columns = array('Sr. No.','veepeeuser_id','name','email','number','gender','gst','user_type','device_type','device_id','device_name','address','account','owner_name','owner_contact','order_name','order_contact','notify_email','notify_sms','status');
+                $order = $users1->get();
+                $callback = function() use ($order, $columns) {
+                    $file = fopen('php://output', 'w');
+                    fputcsv($file, $columns);
+                    $i=0;
+                    foreach($order as $row) {
+                        fputcsv($file, array(
+                           $i,    
+                           $row->veepeeuser_id,
+                           $row->name,
+                           $row->email,
+                           $row->number,
+                           $row->gender,
+                           $row->gst,
+                           $row->user_type,
+                           $row->device_type,
+                           $row->device_id,
+                           $row->device_name,
+                           $row->address,
+                           $row->account,
+                           $row->owner_name,
+                           $row->owner_contact,
+                           $row->order_name,
+                           $row->order_contact,
+                           $row->notify_email,
+                           $row->notify_sms,
+                           user_status($row->status),
+                        ));
+                        
+                        $i++;
+                    }
+                    fclose($file);
+                };
+                return \Response::stream($callback,200,$headers);
+            }
+            $users = $users1->paginate(20);
+            return view('admin.reports.apploginreport', compact('users','branches'));
+        }else{
+            $users = User::join('user_fcm_data','users.id','=','user_fcm_data.user_id')->select('users.*','users.id as userid','user_fcm_data.*','user_fcm_data.created_at as createdat') ->orderby('user_fcm_data.created_at','desc')->paginate(20);
+            return view('admin.reports.apploginreport', compact('users','branches'));
+        }  
+    }
+    
+    public function userSignout(Request $request){
+        
+        abort_if(Gate::denies('report_access'), Response::HTTP_FORBIDDEN, '403 Forbidden');
+        $revoked = DB::table('oauth_access_tokens')->where('user_id', '=', $request->user_id)->update(['revoked' => 1]);
+        $query = FcmModel::where('device_id', $request->device_id)->update(array('device_fcm' =>'','is_login'=>0));
+        //Auth::logout();
+        // $response['message'] = 'responsefully Logout';
+        // return view('admin.reports.apploginreport', compact('users','branches'));
+        return back();
+    }
+    
+     
+}

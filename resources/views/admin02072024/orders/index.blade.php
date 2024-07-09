@@ -1,0 +1,442 @@
+@extends('layouts.admin')
+@section('content')
+
+<div style="margin-bottom: 10px;" class="row">
+    @can('order_create')
+
+    <!--  <div class="col-lg-12">
+            <a class="btn btn-success float-right" href="{{ route('admin.orders.create') }}">
+              {{ trans('global.add') }} {{ trans('cruds.order.title_singular') }}
+            </a>
+        </div> -->
+
+    @endcan
+</div>
+<div class='toast'></div>
+<div class="card">
+    <div class="card-header">
+        {{ trans('cruds.order.title_singular') }} {{ trans('global.list') }}
+    </div>
+
+    @if(session('success'))
+    <div class="alert alert-success">{{session('success')}}</div>
+    @elseif(session('error'))
+    <div class="alert alert-danger">{{session('success')}}</div>
+    @endif
+
+    <div class="card-body">
+
+        <form method="get" action="">
+            <div class="row">
+                <div class="col-md-2 form-group">
+                    <input type="text" class="form-control" name="name" value="{{@$_GET['name']}}" placeholder="Enter firm name">
+                </div>
+
+                <div class="col-md-2 form-group">
+                    <input type="text" class="form-control" name="vporder_id" value="{{@$_GET['vporder_id']}}" placeholder="Enter Veepee Order ID">
+                </div>
+
+                <div class="col-md-2 form-group">
+                    <input type="text" class="form-control" name="account_number" value="{{@$_GET['account_number']}}" placeholder="Enter Account Number">
+                </div>
+
+                @if(@$_GET['status'] === 'Confirm')
+                <div class="col-md-2 form-group">
+                    <select class="form-control" name="status">
+                        <option value="" selected>Select Status</option>
+                        <option value="Confirm" {{(@$_GET['status'] === 'Confirm') ? 'selected' : ''}}>Confirm</option>
+                        <option value="Cancelled" {{(@$_GET['status'] === 'Cancelled') ? 'selected' : ''}}>Cancelled</option>
+                        <option value="Completed" {{(@$_GET['status'] === 'Completed') ? 'selected' : ''}}>Completed</option>
+                    </select>
+                </div>
+                @else
+                <input type="hidden" name="status" value="{{@$_GET['status']}}">
+                @endif
+
+                @if($user_type != 'Branch Operator' || $user_type != 'Mix Branches')
+                <div class="col-md-2 form-group">
+                    <select class="form-control" name="branch">
+                        <option value="" selected>Select Branch</option>
+                        @if(branches()->isNotEmpty())
+                        @foreach(@branches() as $row)
+                        <option value="{{$row->id}}" {{(@$_GET['branch'] === $row->id) ? 'selected' : ''}}>{{$row->name}}</option>
+                        @endforeach
+                        @endif
+
+                    </select>
+                </div>
+                @endif
+
+
+
+                <div class="col-md-2 form-group">
+                    <input type="date" class="form-control" name="start_date" value="{{@$_GET['start_date']}}" placeholder="Enter start date">
+                </div>
+
+                <div class="col-md-2 form-group">
+                    <input type="date" class="form-control" name="end_date" value="{{@$_GET['end_date']}}" placeholder="Enter end date">
+                </div>
+
+                <div class="col-md-1 form-group">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+                <div class="col-md-1 form-group">
+                    <button type="submit" name="export" class="btn btn-primary" value="export">Export</button>
+                </div>
+                <div class="col-md-1 form-group">
+                    <a href="{{ route('admin.orders.index') }}" class="btn btn-primary">Clear all</a>
+                </div>
+            </div>
+        </form>
+        <meta name="csrf-token" content="{{ csrf_token() }}">
+        <div class="table-responsive">
+            <table class=" table table-bordered table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>SL.No.</th>
+                        <th>Order ID</th>
+                        <th>Buyer Name </th>
+                        <th>Supplier Name </th>
+                        <th>Station</th>
+                        @if($user_type != 'Branch Operator' || $user_type != 'Mix Branches')
+                        <th>Brand</th>
+                        @endif
+                        @if($user_type == 'Branch Operator' || $user_type == 'Mix Branches')
+                        <th>Case</th>
+                        <th>Amount</th>
+                        <th>R. Case</th>
+                        <th>R. Bal</th>
+                        @endif
+                        <th>Status</th>
+                        <th>Reason</th>
+                        <th>Remark</th>
+                        <th>Order Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if(@$orders->isNotEmpty())
+
+                    <?php
+                    $TARPCase   = null;
+                    $TATRPAmount = null;
+                    $TRPCase   = null;
+                    $TRPAmount = null;
+                    $number = 1;
+                    $numElementsPerPage = 20;
+                    $pageNumber = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+                    $currentNumber = ($pageNumber - 1) * $numElementsPerPage + $number;
+                    ?>
+                    @foreach($orders->unique('vporder_id') as $key => $value)
+                    <tr data-entry-id="{{ $value->id }}">
+                        <td>{{@$currentNumber++}}</td>
+                        <td>{{$value->vporder_id}}</td>
+                        <td>{{ getUser($value->buyer_id)->name ?? '' }} <br> <b>({{getUser($value->buyer_id)->veepeeuser_id}})</b></td>
+                        <td>{{ getUser($value->supplier_id)->name ?? '' }}<br> <b>({{@getUser(@$value->supplier_id)->veepeeuser_id}})</b> </td>
+                        <td>{{ $value->station ?? '' }} </td>
+                        @if($user_type != 'Branch Operator' || $user_type != 'Mix Branches')
+                        <td>{{ getBrand($value->brand_id) ?? '' }}</td>
+                        @endif
+                        
+                        @if($user_type == 'Branch Operator' || $user_type == 'Mix Branches')
+
+
+
+                            @php
+                            $ARPCase = $value->pkt_cases ?? '0';
+                            $TARPCase += $ARPCase;
+                            @endphp
+                            <td> {{ $ARPCase }} </td>
+
+                            @php
+                            $ATRPAmount = $value->order_amount ?? '0';
+                            $TATRPAmount += $ATRPAmount;
+                            @endphp
+                            <td> {{ $ATRPAmount }} </td>
+
+                            @php $orderDeliveryPrice = remaing_amount($value->id); @endphp
+
+                            @if( $orderDeliveryPrice > 0)
+
+                                @php
+                                $RPCase = $value->pkt_cases - (delivered_cases_sum($value->id) ?? 0);
+                                $TRPCase = $RPCase;
+                                @endphp
+                                <td> {{ $RPCase }} </td>
+
+                                @php
+                                $RPAmount = $value->order_amount - remaing_amount($value->id);
+                                $TRPAmount += $RPAmount;
+                                @endphp
+                                <td> {{ $RPAmount }}</td>
+
+                            @else
+
+                                @php
+                                //$RPCase = $value->pkt_cases - (delivered_cases_sum($value->id) ?? 0);
+                                $RPCase = $value->pkt_cases;
+                                $TRPCase = $RPCase;
+                                @endphp
+                                <td> {{ $RPCase }} </td>
+
+                                @php
+                                //$RPAmount = $value->order_amount - remaing_amount($value->id);
+                                $RPAmount = $value->order_amount;
+                                $TRPAmount += $RPAmount;
+                                @endphp
+                                <td> {{ $RPAmount }}</td>
+                                
+                            @endif
+
+                        @endif
+
+                        <td> {{ $value->status ?? '' }} </td>
+                        <td> {{ $value->reason ?? '' }} </td>
+                        <td> {{ @$value->remark ?? @ordercancelremark($value->id)->remark }} @if(@ordercancelremark($value->id)->cancelled_by)<br> <b> {{ $value->status ?? '' }} by {{@getUser(ordercancelremark($value->id)->cancelled_by)->name}}</b><br><b>Date: {{ date('Y-m-d', strtotime($value->updated_at)) ?? ''}}</b>@endif</td>
+
+                        <td>{{ $value->order_date ?? ''}}</td>
+                        <td>
+                            @can('order_show')
+                            <a class="btn btn-xs btn-info" href="{{ route('admin.orders.show', $value->id) }}">
+                                {{ trans('global.show') }}
+                            </a>
+                            @if($value->status == 'Rejected')
+                            <a class="btn btn-xs btn-info" href="{{ route('admin.order.reorder', $value->id) }}">
+                                ReOrder
+                            </a>
+                            @endif
+                            @if($value->status == 'New' || $value->status == 'Waiting for approval')
+                            <a class="btn btn-xs btn-info" href="{{ route('admin.order.acceptorder', $value->id) }}">
+                                Accept
+                            </a>
+                            <a class="btn btn-xs btn-info" href="{{ route('admin.order.rejectorder', $value->id) }}">
+                                Reject
+                            </a>
+                            @endif
+                            @endcan
+
+                            @if($value->status == 'Completed')
+                            <span class="badge badge-success">Completed</span>
+                            @else
+                            @if($value->status == 'Confirm' || $value->status == 'Processing')
+                            @if(checkOrderAccept($value->id) == true)
+                            @can('order_edit')
+                            {{-- <a class="btn btn-xs btn-info" href="{{ route('admin.orders.delivery', $value->id) }}"> --}}
+                            @if($user_type == 'Admin' || $user_type == 'N/A')
+                            <a class="btn btn-xs btn-info" href="{{ route('admin.orders.delivery', $value->id) }}">
+                                {{ trans('cruds.order.approve_bill') }}
+                            </a>
+                            @elseif($user_type == 'Branch Operator' || $user_type == 'Mix Branches')
+
+                            <!-- {{ trans('cruds.order.delivery') }}  -->
+                            @php
+                            
+                            $RPPCase = $value->pkt_cases - (delivered_cases_checkbox($value->id));
+                            if($RPPCase == 0){
+                                $RPPCase = -1;
+                            }
+                            @endphp
+                            
+                            <?php $param = request()->input('status'); ?>
+                            @if($param != "Processing")
+                            @for ($i = 0; $i < $RPPCase; $i++)
+                                <input type="checkbox" name="case" value="{{$value->id}}" id="case_checkbox{{$value->id}}{{$i}}">
+                             @endfor
+                            @endif
+
+
+                                @elseif($user_type == 'Head Office Operator')
+                                <a class="btn btn-xs btn-info" href="{{ route('admin.orders.delivery', $value->id) }}">
+                                    Check
+                                </a>
+                                @else
+                                {{ trans('cruds.order.approve_bill') }}
+                                @endif
+                                {{-- </a> --}}
+                                @endcan
+                                @endif
+                                @endif
+                                @endif
+                                @if($value->status === 'Confirm' || $value->status === 'Processing')
+                                @can('order_modification')
+                                <a class="btn btn-xs btn-info" href="{{route('admin.order.edit',$value->id)}}">Edit</a>
+                                @endcan
+                                @endif
+                                <a class="fas fa-info-circle text-dark hos" href="{{ url('print', $value->id) }}" target="_blank" title="Order Info"></a>
+                        </td>
+                    </tr>
+                    @endforeach
+                    @else
+                    <td colspan="11" class="text-center">No data found</td>
+                    @endif
+                </tbody>
+            </table>
+            <div class="float-right">
+                {{ $orders->appends(Input::except('page')) }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Supplier Invoice Popup -->
+<!-- start -->
+<div class="modal fade" id="suplierInvoicePopup" tabindex="-1" role="dialog" aria-labelledby="popupModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="popupModalLabel">Suplier Invoice</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <input type="hidden" class="form-control" id="OrderId" name="OrderId">
+                <div class="modal-body">
+                    <div class="form-group" id="supplier_invoice_no_block">
+                        <label htmlFor="reject_reason">Supplier Invoice No:</label>
+                        <input type="text" class="form-control" id="supplier_invoice_no" name="supplier_invoice_no">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" id="submit-button1" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- end -->
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css">
+<script type="text/javascript">
+    $(document).ready(function() {
+        //toastr.success("This order has been created successfully");
+
+        // Uncheck all checkboxes on page load
+        $('input[type="checkbox"]').prop('checked', false);
+
+        $('#suplierInvoicePopup').on('hidden.bs.modal', function () {
+            location.reload();
+        });
+
+        $('.modal-footer .btn-secondary').on('click', function () {
+            location.reload();
+        });
+
+        $('#suplierInvoicePopup').on('submit', 'form', function (event) {
+            event.preventDefault();
+            var supplier_invoice_no = $('#supplier_invoice_no').val();
+            if (supplier_invoice_no == '') {
+                toastr.error("Supplier Invoice is required");
+                return false;
+            }
+            else{
+
+                var supplier_invoice_no = $('#supplier_invoice_no').val();
+                if (supplier_invoice_no != '') 
+                {
+                    var csrfToken = $('meta[name="csrf-token"]').attr('content');
+                    var id = $('#OrderId').val();
+
+                    $.ajaxSetup({
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken
+                        }
+                    });
+                    $.ajax({
+                        url: "{{url('admin/orders/add_delivery_new/')}}",
+                        type: 'POST',
+                        data: {
+                            supplier_invoice_no: supplier_invoice_no,
+                            id: parseInt(id),
+                            no_of_case: 1,
+                            status: "Processing"
+                        },
+                        success: function(response) {
+                            console.log(response);
+                            $("#suplierInvoicePopup").modal("hide");
+                            toastr.success("This order has been created successfully");
+                            //window.confirm('This order has been created successfully')
+                            // setTimeout(function() {
+                            //     toast.remove();
+                            // }, 2000);
+                             location.reload();
+                        },
+                        error: function(xhr, status, error) {
+                            console.log(xhr.responseText);
+                        }
+                    });
+                }
+                else 
+                {
+                    location.reload();
+                }
+            }
+        });
+
+        $(document).on('change', 'input[type="checkbox"]', function() {
+            if ($(this).is(':checked')) {
+
+                var id = $(this).val();
+                //var csrfToken = $('meta[name="csrf-token"]').attr('content');
+                var confirmMessage = "Are you sure you want to create order in process?";
+                if (window.confirm(confirmMessage)) {
+
+                    $("#suplierInvoicePopup").modal("show");
+                    $('#OrderId').val(id);
+
+                    // Make AJAX POST request
+                    /*$.ajaxSetup({
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken
+                        }
+                    });
+                    $.ajax({
+                        url: "{{url('admin/orders/add_delivery_new/')}}",
+                        type: 'POST',
+                        data: {
+                            id: parseInt(id),
+                            no_of_case: 1,
+                            status: "Processing"
+                        },
+                        success: function(response) {
+                            console.log(response);
+                            toastr.success("This order has been created successfully");
+                            //window.confirm('This order has been created successfully')
+                            // setTimeout(function() {
+                            //     toast.remove();
+                            // }, 2000);
+                             location.reload();
+                        },
+                        error: function(xhr, status, error) {
+                            console.log(xhr.responseText);
+                        }
+                    });*/
+                } else {
+                    //showToast("Hello, World!");
+                    location.reload();
+                }
+
+            }
+        });
+    });
+
+    function showToast(message) {
+        // Create a new div element for the toaster message
+        var toast = $("<div class='toast'>" + message + "</div>");
+
+        // Append the toaster message to the body
+        $("body").append(toast);
+
+        // Set a timeout to remove the toaster message after 2 seconds
+        setTimeout(function() {
+            toast.remove();
+        }, 2000);
+    }
+
+    // Example usage
+    showToast("Hello, World!");
+</script>
+@endsection

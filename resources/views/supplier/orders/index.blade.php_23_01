@@ -1,0 +1,386 @@
+ @extends('layouts.admin')
+ @section('content')
+
+ <div style="margin-bottom: 10px;" class="row">
+
+ </div>
+ <div class="card">
+     <div class="card-header">
+         {{ trans('cruds.order.title_singular') }} {{ trans('global.list') }}
+     </div>
+
+     <div class="card-body">
+         @include('errors.flashmessage')
+         <form method="get" action="">
+             <div class="row">
+                 <div class="col-md-2 form-group">
+                     <input type="text" class="form-control" name="name" value="{{@$_GET['name']}}" placeholder="Enter firm name">
+                 </div>
+
+                 <div class="col-md-2 form-group">
+                     <input type="text" class="form-control" name="veepeeuser_id" value="{{@$_GET['veepeeuser_id']}}" placeholder="Enter Veepee ID">
+                 </div>
+
+                 <!-- <div class="col-md-2 form-group">
+                     <select class="form-control" name="status">
+                         <option value="" selected>Select Status</option>
+                         <option value="Confirm" {{(@$_GET['status'] === 'Confirm') ? 'selected' : ''}}>Confirm</option>
+                         <option value="Rejected" {{(@$_GET['status'] === 'Rejected') ? 'selected' : ''}}>Rejected</option>
+                         <option value="Cancelled" {{(@$_GET['status'] === 'Cancelled') ? 'selected' : ''}}>Cancelled</option>
+                         <option value="Completed" {{(@$_GET['status'] === 'Completed') ? 'selected' : ''}}>Completed</option>
+                     </select>
+                 </div> -->
+                 <input type="hidden" class="form-control" name="status" value="request()->input('status')">
+
+                 <div class="col-md-2 form-group">
+                     <input type="date" class="form-control" name="start_date" value="{{@$_GET['start_date']}}" placeholder="Enter start date">
+                 </div>
+
+                 <div class="col-md-2 form-group">
+                     <input type="date" class="form-control" name="end_date" value="{{@$_GET['end_date']}}" placeholder="Enter end date">
+                 </div>
+
+                 <div class="col-md-1 form-group">
+                     <button type="submit" class="btn btn-primary">Search</button>
+                 </div>
+
+                 <div class="col-md-1 form-group">
+                     <a href="{{ route('supplier.orders.index') }}" class="btn btn-primary">Clear all</a>
+                 </div>
+             </div>
+         </form>
+         <div class="table-responsive">
+             <table class=" table table-bordered table-striped table-hover">
+                 <thead>
+                     <tr>
+                        <td>Sl No.</td>
+                         <td>Order ID</td>
+                         <th>Buyer Name </th>
+                         <th>Supplier Name </th>
+                         <th>Station</th>
+                         <th>Brand</th>
+                         <th>Case</th>
+                         <th>Amount</th>
+                         <th>R. Case</th>
+                         <th>R. Bal</th>
+                         <th>Status</th>
+                         <th>Remark</th>
+                         <th>Created Time</th>
+                         <th>Action</th>
+                     </tr>
+                 </thead>
+                 <tbody>
+                     @if(@$orders->isNotEmpty())
+                     <?php
+                        $TARPCase   = null;
+                        $TATRPAmount = null;
+                        $TRPCase   = null;
+                        $TRPAmount = null;
+                        $number = 1;
+                        $numElementsPerPage = 20;
+                        $pageNumber = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+                        $currentNumber = ($pageNumber - 1) * $numElementsPerPage + $number;
+                        ?>
+                     @foreach($orders as $key => $value)
+                     <tr data-entry-id="{{ $value->id }}">
+                         <td>{{@$currentNumber++}}</td>
+                         <td>{{$value->vporder_id}}</td>
+                         <td>{{ getUser($value->buyer_id)->name ?? '' }} <b> ({{ getUser($value->buyer_id)->veepeeuser_id ?? '' }})</b></td>
+                         <td>{{ getUser($value->supplier_id)->name ?? '' }} <b> ({{ getUser($value->supplier_id)->veepeeuser_id ?? '' }})</b></td>
+                         <td>{{ $value->station ?? '' }}</td>
+
+                         <td>{{ getBrand($value->brand_id) ?? '' }}</td>
+                         @php
+                         $ARPCase = $value->pkt_cases ?? '0';
+                         $TARPCase += $ARPCase;
+                         @endphp
+                         <td> {{ $ARPCase }} </td>
+                         @php
+                         $ATRPAmount = $value->order_amount ?? '0';
+                         $TATRPAmount += $ATRPAmount;
+                         @endphp
+                         <td> {{ $ATRPAmount }} </td>
+                         @php
+                         $RPCase = $value->pkt_cases - (delivered_cases_sum($value->id) ?? 0);
+                         $TRPCase = $RPCase;
+                         @endphp
+                         <td> {{ $RPCase }} </td>
+                         @php
+                         $RPAmount = $value->order_amount - remaing_amount($value->id);
+                         $TRPAmount += $RPAmount;
+                         @endphp
+
+                         <td> {{ $RPAmount }}</td>
+                         <td>{{ $value->status ?? '' }} <?php if ($value->status == 'Rejected') {
+                                                            echo ($value->supplier_accept == 0) ? 'By Supplier' : 'By Buyer';
+                                                        } ?></td>
+                         <td> {{ ordercancelremark($value->id)->reason ?? '' }} @if(@ordercancelremark($value->id)->cancelled_by)<b> by {{@getUser(ordercancelremark($value->id)->cancelled_by)->name}}</b>@endif</td>
+                         <td>{{ $value->created_at ?? ''}}</td>
+                         <td>
+                             @php
+                             $RPPCase = $RPCase - (delivered_cases_checkbox($value->id));
+                             if($RPPCase == 0){
+                             }
+                             @endphp
+                             {{-- {{$RPPCase}} --}}
+                             <?php $param = request()->input('status'); ?>
+                             <!-- {{$RPPCase}} -->
+                             @if($param == "orderDetails")
+                             @for ($i = 0; $i < $RPPCase; $i++)
+                                <input type="checkbox" name="case" value="{{$value->id}}" id="case_checkbox{{$value->id}}{{$i}}">
+                             @endfor
+                                 @endif
+                                 @if (!in_array($value->status, ['New', 'Waiting for approval']))
+                                 <a class="fas fa-info-circle text-dark" href="{{ url('print', $value->id) }}" target="_blank" title="Order Info"></a>
+                                 @endif
+
+                                 @if($value->supplier_accept === 1)
+
+                                 <?php
+                                    if (in_array($value->status, ['Processing', 'Completed', 'Accepted', 'Accepted by supplier'])) {
+                                        $btn = 'btn-success';
+                                    } else {
+                                        $btn = 'btn-danger';
+                                    } ?>
+                                     @if($value->status == 'Completed')
+                                    <button class="btn btn-xs {{$btn}}">
+                                        {{$value->status}}
+                                    </button>
+                                    @endif
+
+                                 @elseif($value->supplier_accept === 0)
+                                 <button class="btn btn-xs btn-danger">
+                                     Rejected
+                                 </button>
+
+
+
+                                 @else
+
+                                 @if($value->status === 'New')
+                                 <a class="btn btn-xs btn-success" href="{{ route('supplier.orders.accept', $value->id) }}">{{ trans('global.accept') }}</a>
+
+                                 <a class="btn btn-xs btn-danger" href="{{ route('supplier.orders.reject', $value->id) }}">{{ trans('global.reject') }}</a>
+                                 @endif
+                                 @endif
+
+                                 @if($value->status == "Waiting for approval")
+                                 <!-- <a class="btn btn-xs btn-success" onchange="sendotp('close-otp');" data-toggle="modal" data-target="#myModal">Verify OTP</a> -->
+                                 <button class="btn btn-xs btn-success" onclick="sendotp('{{$value->id}}','{{$value->buyer_id}}','{{$value->supplier_id}}','generate_otp')">Verify OTP</button>
+                                 @endif
+
+                         </td>
+
+                     </tr>
+                     @endforeach
+                     @else
+                     <td colspan="11" class="text-center">No data found</td>
+                     @endif
+                 </tbody>
+             </table>
+             <div class="float-right">
+             {{ $orders->appends($params)->links() }}
+             </div>
+         </div>
+     </div>
+ </div>
+ <!-- OrderChecking Model -->
+ <div class="modal fade" id="checkOrderModal" tabindex="-1" role="dialog" aria-labelledby="popupModalLabel" aria-hidden="true">
+     <div class="modal-dialog">
+         <div class="modal-content">
+             <form>
+                 <div class="modal-header">
+                     <h5 class="modal-title" id="popupModalLabel">Upload Document Check Order</h5>
+                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                         <span aria-hidden="true">&times;</span>
+                     </button>
+                 </div>
+                 <input type="hidden" class="form-control" id="selectedOrderId" name="selectedOrderId">
+                 <div class="modal-body">
+                     <div class="form-group">
+                         <label htmlFor="reject_reason">Order Form</label>
+                         <input type="file" id="order_form" name="order_form" class="form-control">
+                     </div>
+                     <div class="form-group">
+                         <label htmlFor="reject_reason">Supplier Bill*</label>
+                         <input type="file" id="supplier_bill" name="supplier_bill" class="form-control">
+                     </div>
+                     <div class="form-group">
+                         <label htmlFor="reject_reason">Transport Bill*</label>
+                         <input type="file" id="transport_bill" name="transport_bill" class="form-control">
+                     </div>
+                     <div class="form-group">
+                         <label htmlFor="reject_reason">Eway Bill</label>
+                         <input type="file" id="eway_bill" name="eway_bill" class="form-control">
+                     </div>
+                     <div class="form-group">
+                         <label htmlFor="reject_reason">Credit Note</label>
+                         <input type="file" id="credit_note" name="credit_note" class="form-control">
+                     </div>
+                 </div>
+                 <div class="modal-footer">
+                     <button type="submit" id="orderFormsubmitButton" class="btn btn-primary">Save</button>
+                     <button type="submit" id="orderFormsubmitButton1" class="btn btn-primary" style="display:none" disabled>Loading...</button>
+                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                 </div>
+             </form>
+         </div>
+     </div>
+ </div>
+ <!-- otp verify Modal -->
+ <div class="modal fade" id="myModal" role="dialog">
+     <div class="modal-dialog">
+
+         <!-- Modal content-->
+         <div class="modal-content">
+             <div class="modal-header">
+                 <h4 class="modal-title">Order Verification</h4>
+                 <button type="button" class="close" data-dismiss="modal">&times;</button>
+             </div>
+             <div class="modal-body">
+                 <input type="number" class="form-control" id="otp" name="otp" placeholder="Enter OTP">
+                 <input type="hidden" class="form-control" id="otp_order_id">
+                 <input type="hidden" class="form-control" id="otp_buyer_id">
+                 <input type="hidden" class="form-control" id="otp_supplier_id">
+             </div>
+             <div class="modal-footer">
+                 <button type="button" class="btn  btn-success" onclick="otpmodelcall('verify-otp');" data-dismiss="modal">Verify</button>
+                 <button type="button" class="btn btn-default" onclick="otpmodelcall('close-otp');" data-dismiss="modal">Close</button>
+             </div>
+         </div>
+
+     </div>
+ </div>
+ <meta name="csrf-token" content="{{ csrf_token() }}" />
+ <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
+ <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css">
+ <script>
+     function otpmodelcall(type) {
+         var votp = $('#otp').val();
+
+         var CSRF_TOKEN = $('meta[name="csrf-token"]').attr('content');
+         $.ajax({
+             /* the route pointing to the post function */
+             url: "{{url('supplier/otpVerifications/')}}",
+             type: 'POST',
+             /* send the csrf-token and the input to the controller */
+             data: {
+                 _token: CSRF_TOKEN,
+                 order_id: $('#otp_order_id').val(),
+                 buyer_id: $('#otp_buyer_id').val(),
+                 supplier_id: $('#otp_supplier_id').val(),
+                 type: 'verify_otp',
+                 otp: $('#otp').val()
+             },
+             dataType: 'JSON',
+             /* remind that 'data' is the response of the AjaxController */
+             success: function(data) {
+                 if (data.status == true) {
+                     alert(data.message);
+                     window.location.reload();
+                 } else {
+                     alert(data.message);
+                     $('#myModal').modal('show');
+                 }
+
+             },
+             fail: function(xhr, textStatus, errorThrown) {
+                 alert('Order OTP mismatch');
+             }
+         });
+     }
+
+     function sendotp(order_id, buyer_id, supplier_id, type) {
+         var CSRF_TOKEN = $('meta[name="csrf-token"]').attr('content');
+         $.ajax({
+             /* the route pointing to the post function */
+             url: "{{url('supplier/otpVerifications/')}}",
+             type: 'POST',
+             /* send the csrf-token and the input to the controller */
+             data: {
+                 _token: CSRF_TOKEN,
+                 order_id: order_id,
+                 buyer_id: buyer_id,
+                 supplier_id: supplier_id,
+                 type: type
+             },
+             dataType: 'JSON',
+             /* remind that 'data' is the response of the AjaxController */
+             success: function(data) {
+                 $('#otp_order_id').val(order_id);
+                 $('#otp_buyer_id').val(buyer_id);
+                 $('#otp_supplier_id').val(supplier_id);
+                 alert(data.message);
+                 $('#myModal').modal('show');
+             }
+         });
+     }
+     $(document).ready(function() {
+         $(document).on('change', 'input[type="checkbox"]', function() {
+             if ($(this).is(':checked')) {
+                 var id = $(this).val();
+                 $("#selectedOrderId").val(id);
+                 var csrfToken = $('meta[name="csrf-token"]').attr('content');
+                 $('#checkOrderModal').modal('show');
+             }
+         });
+         $('#orderFormsubmitButton').on('click', function(e) {
+             e.preventDefault();
+             var csrfToken = $('meta[name="csrf-token"]').attr('content');
+             var formData = new FormData();
+             var selectedImage = $('#supplier_bill')[0].files[0];
+             formData.append('order_form', $('#order_form')[0].files[0]);
+             formData.append('supplier_bill', $('#supplier_bill')[0].files[0] ?? '');
+             formData.append('transport_bill', $('#transport_bill')[0].files[0] ?? '');
+             formData.append('eway_bill', $('#eway_bill')[0].files[0]);
+             formData.append('credit_note', $('#credit_note')[0].files[0]);
+             formData.append('id', parseInt($('#selectedOrderId').val()));
+             formData.append('no_of_case', 1);
+             formData.append('status', "Processing");
+             var confirmMessage = "Are you sure you want to create order in process?";
+             if (window.confirm(confirmMessage)) {
+                 $.ajaxSetup({
+                     headers: {
+                         'X-CSRF-TOKEN': csrfToken
+                     }
+                 });
+                 //document.getElementById('orderFormsubmitButton').disabled = true;
+                 $('#orderFormsubmitButton').hide();
+                 $('#orderFormsubmitButton1').show();
+                 $.ajax({
+                     type: 'POST',
+                     url: "{{url('supplier/orders/add_delivery_new/')}}",
+                     data: formData,
+                     cache: false,
+                     contentType: false,
+                     processData: false,
+                     success: function(response) {
+                         if (response?.data?.status == true) {
+                             //alert(response?.data?.message);
+                             toastr.success(response?.data?.message);
+                             $('#mySelect').val('');
+                             $('#reject_reason').val('');
+                             // Close the modal
+                             //$('#editModal').modal('hide');
+                             location.reload();
+
+                         } else {
+                             toastr.error(response?.data?.message);
+                             $('#orderFormsubmitButton').show();
+                             $('#orderFormsubmitButton1').hide();
+                         }
+                     },
+                     error: function(xhr, status, error) {
+                        console.log(xhr.responseText);
+                    }
+                 });
+             } else {
+                 //showToast("Hello, World!");
+                 location.reload();
+             }
+
+         });
+     });
+ </script>
+ @endsection
