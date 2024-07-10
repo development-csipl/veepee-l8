@@ -3,10 +3,10 @@
     use App\Models\{SuppliersModels,BuyerModel,OrderModel,OrderTrackingModel,OrderDeliveryModel,OrderCancelModel,FcmModel,SiteInfoModel};
     use App\{User,UserRole,Role};
     use Carbon\Carbon;
-    use DB;
-    //use Illuminate\Support\Facades\DB;
-    use Mail;
-    //use Illuminate\Support\Facades\Mail;
+    //use DB;
+    use Illuminate\Support\Facades\DB;
+    //use Mail;
+    use Illuminate\Support\Facades\Mail;
     
     //use Auth;
     function processing_amount($user_id){
