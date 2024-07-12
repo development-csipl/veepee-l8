@@ -3,7 +3,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
-use Lcobucci\JWT\Parser;
+//use Lcobucci\JWT\Parser;
+use Lcobucci\JWT\Encoding\JoseEncoder;
+use Lcobucci\JWT\Token\Parser;
 use App\Models\{BranchModel,TransportsModels,BrandModel,SuppliersModels,ItemModel,OrderModel,OrderItemModel,OrderGalleryModel,OrderTrackingModel,OrderCancelModel,OrderDeliveryModel,RejectReasonModel,BuyerModel,SiteInfoModel,CourierModel};
 use App\Models\{OrderConfigurationModel};
 use App\Jobs\{OrderNotification,OrderSmsNotification,SMSDeliveryNotification};
@@ -23,7 +25,8 @@ class OrdersController extends Controller{
     public function CreateOrdersOld(Request $request){
 
         $value = $request->bearerToken();
-        $id = (new Parser())->parse($value)->getHeader('jti');
+        //$id = (new Parser())->parse($value)->getHeader('jti');
+        $id = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti']; 
         $user_id = Token::find($id)->user_id;
  
         if($user_id){
@@ -208,7 +211,8 @@ class OrdersController extends Controller{
     public function CreateOrders(Request $request){
         
         $value = $request->bearerToken();
-        $id = (new Parser())->parse($value)->getHeader('jti');
+        //$id = (new Parser())->parse($value)->getHeader('jti');
+        $id = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti']; 
         $user_id = Token::find($id)->user_id;
  
         if($user_id){
@@ -437,7 +441,8 @@ class OrdersController extends Controller{
     
     public function repeatOrders(Request $request){
         $value = $request->bearerToken();
-        $id = (new Parser())->parse($value)->getHeader('jti');
+        //$id = (new Parser())->parse($value)->getHeader('jti');
+        $id = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti']; 
         $user_id = Token::find($id)->user_id;
         if($user_id){
             $validator = Validator::make($request->all(), [
@@ -588,7 +593,8 @@ class OrdersController extends Controller{
 
     public function OrderList(Request $request){
         $value = $request->bearerToken();
-        $id = (new Parser())->parse($value)->getHeader('jti');
+        //$id = (new Parser())->parse($value)->getHeader('jti');
+        $id = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti']; 
         $user_id = Token::find($id)->user_id;
          
         if($user_id){
@@ -756,7 +762,8 @@ class OrdersController extends Controller{
     public function OrderDetails(Request $request){
         
         $value = $request->bearerToken();
-        $id = (new Parser())->parse($value)->getHeader('jti');
+        //$id = (new Parser())->parse($value)->getHeader('jti');
+        $id = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti']; 
         $user_id = Token::find($id)->user_id;
         //print_r($user_id); die;
         //return response()->json(['message'=> 'Order details','status' => true,'orders'=>$user_id],200);
@@ -866,7 +873,8 @@ class OrdersController extends Controller{
     public function updateOrderDetails(Request $request){
         
         $value      = $request->bearerToken();
-        $id         = (new Parser())->parse($value)->getHeader('jti');
+        //$id         = (new Parser())->parse($value)->getHeader('jti');
+        $id = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti']; 
         $user_idd    = Token::find($id)->user_id;
         if($user_idd){
             $orderData = OrderModel::where(['id'=> $request->order_id])->first();
@@ -1004,7 +1012,8 @@ class OrdersController extends Controller{
     
     public function BuyerFeedback(Request $request){
         $value = $request->bearerToken();
-        $id = (new Parser())->parse($value)->getHeader('jti');
+        //$id = (new Parser())->parse($value)->getHeader('jti');
+        $id = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti']; 
         $user_id = Token::find($id)->user_id;
         $msg='';
         if($user_id){
@@ -1040,7 +1049,8 @@ class OrdersController extends Controller{
     
     public function remainingAmount(Request $request){
         $value      = $request->bearerToken();
-        $id         = (new Parser())->parse($value)->getHeader('jti');
+        //$id         = (new Parser())->parse($value)->getHeader('jti');
+        $id         = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti']; 
         $user_id    = Token::find($id)->user_id;
         
         if($user_id){
@@ -1090,7 +1100,8 @@ class OrdersController extends Controller{
 
     public function pending_order(Request $request){
         $value = $request->bearerToken();
-        $id = (new Parser())->parse($value)->getHeader('jti');
+        //$id = (new Parser())->parse($value)->getHeader('jti');
+        $id = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti']; 
         $user_id = Token::find($id)->user_id;
         if($user_id){
             $userchk = getUser($user_id);
@@ -1120,7 +1131,8 @@ class OrdersController extends Controller{
     
     public function cancel_order(Request $request){
         $value      = $request->bearerToken();
-        $id         = (new Parser())->parse($value)->getHeader('jti');
+        //$id         = (new Parser())->parse($value)->getHeader('jti');
+        $id = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti']; 
         $user_id    = Token::find($id)->user_id;
         
         if($user_id){

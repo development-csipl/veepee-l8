@@ -3,7 +3,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
-use Lcobucci\JWT\Parser;
+//use Lcobucci\JWT\Parser;
+use Lcobucci\JWT\Encoding\JoseEncoder;
+use Lcobucci\JWT\Token\Parser;
 use App\Models\BranchModel;
 use App\Models\TransportsModels;
 use App\Models\BrandModel;
@@ -47,7 +49,8 @@ class AppapiController extends Controller{
     public function bgreport(Request $request){
         
         $value      = $request->bearerToken();
-    	$id         = (new Parser())->parse($value)->getHeader('jti');
+    	//$id         = (new Parser())->parse($value)->getHeader('jti');
+        $id    = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
     	//$user_id    = Token::find($id)->user_id;
     	$user_id    = $request->user_id;
     	//$startdate=$request->start_date;
@@ -68,7 +71,8 @@ class AppapiController extends Controller{
     public function bgreport_new(Request $request){
         
         $value      = $request->bearerToken();
-    	$id         = (new Parser())->parse($value)->getHeader('jti');
+    	//$id         = (new Parser())->parse($value)->getHeader('jti');
+        $id    = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
     	//$user_id    = Token::find($id)->user_id;
     	$user_id    = $request->user_id;
     	//$startdate=$request->start_date;
@@ -304,7 +308,8 @@ class AppapiController extends Controller{
     //Branches List 
     public function branches(Request $request){
         $value      = $request->bearerToken();
-    	$id         = (new Parser())->parse($value)->getHeader('jti');
+    	//$id         = (new Parser())->parse($value)->getHeader('jti');
+        $id         = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
     	$user_id    = Token::find($id)->user_id;
     	if($user_id){
     	    $userchk = getUser($user_id);
@@ -347,7 +352,8 @@ class AppapiController extends Controller{
         */
         
         $value      = $request->bearerToken();
-    	$id         = (new Parser())->parse($value)->getHeader('jti');
+    	//$id         = (new Parser())->parse($value)->getHeader('jti');
+        $id    = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
     	$user_id    = Token::find($id)->user_id;
     	
     	if($user_id){
@@ -369,8 +375,8 @@ class AppapiController extends Controller{
     // brand and transport list
     public function brands(Request $request,BranchModel $info){
         $value = $request->bearerToken();
-    	$id = (new Parser())->parse($value)->getHeader('jti');
-    	
+    	//$id = (new Parser())->parse($value)->getHeader('jti');
+    	$id    = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
     	 $user_id = Token::find($id)->user_id;
     	
     	 
@@ -427,7 +433,8 @@ class AppapiController extends Controller{
     //suppliers and items list
     public function Suppliers_old(Request $request,BrandModel $info){
         $value = $request->bearerToken();
-    	$id = (new Parser())->parse($value)->getHeader('jti');
+    	//$id = (new Parser())->parse($value)->getHeader('jti');
+        $id    = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
     	$user_id = Token::find($id)->user_id;
     	if($user_id){
     	    $userchk = getUser($user_id);
@@ -478,7 +485,8 @@ class AppapiController extends Controller{
 
     public function Suppliers(Request $request,BrandModel $info){
         $value = $request->bearerToken();
-    	$id = (new Parser())->parse($value)->getHeader('jti');
+    	//$id = (new Parser())->parse($value)->getHeader('jti');
+        $id    = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
     	$user_id = Token::find($id)->user_id;
     	if($user_id){
     	    $userchk = getUser($user_id);
@@ -545,7 +553,8 @@ class AppapiController extends Controller{
     // Get Transport
     public function transports(Request $request){
         $value = $request->bearerToken();
-    	$id = (new Parser())->parse($value)->getHeader('jti');
+    	//$id = (new Parser())->parse($value)->getHeader('jti');
+        $id    = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
     	$user_id = Token::find($id)->user_id;
     	if($user_id){
     	    $userchk = getUser($user_id);
@@ -576,7 +585,8 @@ class AppapiController extends Controller{
 
     public function createTransports(Request $request){
         $value = $request->bearerToken();
-    	$id = (new Parser())->parse($value)->getHeader('jti');
+    	//$id = (new Parser())->parse($value)->getHeader('jti');
+        $id    = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
     	$user_id = Token::find($id)->user_id;
     	if($user_id){
     	    $userchk = getUser($user_id);
@@ -632,7 +642,8 @@ class AppapiController extends Controller{
     // check buyer limit 
     public function checkBuyerCreditLimit(Request $request){
         $value = $request->bearerToken();
-    	$id = (new Parser())->parse($value)->getHeader('jti');
+    	//$id = (new Parser())->parse($value)->getHeader('jti');
+        $id    = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
     	$user_id = Token::find($id)->user_id;
     	if($user_id){
     	    $userchk = getUser($user_id);
@@ -676,7 +687,8 @@ class AppapiController extends Controller{
 
     public function rating(Request $request){
         $value = $request->bearerToken();
-        $id = (new Parser())->parse($value)->getHeader('jti');
+        //$id = (new Parser())->parse($value)->getHeader('jti');
+        $id    = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
         $user = Token::find($id);
         $user_id = @$user->user_id;
         $msg='';
@@ -720,7 +732,8 @@ class AppapiController extends Controller{
     
     public function enquiries(Request $request){
         $value      = $request->bearerToken();
-        $id         = (new Parser())->parse($value)->getHeader('jti');
+        //$id         = (new Parser())->parse($value)->getHeader('jti');
+        $id    = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
         $user       = Token::find($id);
         $user_id    = @$user->user_id;
         if($user_id){
@@ -737,7 +750,8 @@ class AppapiController extends Controller{
     
     public function getenquirybyuserid(Request $request, $user_id){
         $value = $request->bearerToken();
-        $id = (new Parser())->parse($value)->getHeader('jti');
+        //$id = (new Parser())->parse($value)->getHeader('jti');
+        $id    = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
         $user = Token::find($id);
         $user_id = @$user->user_id;
 
@@ -770,7 +784,8 @@ class AppapiController extends Controller{
 
     public function enquiriesdata(Request $request){
         $value      = $request->bearerToken();
-        $id         = (new Parser())->parse($value)->getHeader('jti');
+        //$id         = (new Parser())->parse($value)->getHeader('jti');
+        $id    = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
         $user       = Token::find($id);
         $user_id    = @$user->user_id;
         $enqData =  EnquiryDataModel::orderBy('id', 'desc')->first();
@@ -822,7 +837,8 @@ class AppapiController extends Controller{
 
     public function getenquirdataybyuserid(Request $request){
         $value = $request->bearerToken();
-        $id = (new Parser())->parse($value)->getHeader('jti');
+        //$id = (new Parser())->parse($value)->getHeader('jti');
+        $id    = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
         $user = Token::find($id);
         $user_id = @$user->user_id;
 
@@ -884,7 +900,8 @@ class AppapiController extends Controller{
 
     public function getRatingbyuserid(Request $request, $brand_id){
         $value = $request->bearerToken();
-        $id    = (new Parser())->parse($value)->getHeader('jti');
+        //$id    = (new Parser())->parse($value)->getHeader('jti');
+        $id    = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
         $user  = Token::find($id);
         $user_id = @$user->user_id;
 
@@ -991,8 +1008,9 @@ class AppapiController extends Controller{
     // FCM notification list
     public function fcmnotificationlist(Request $request){
         
-    	    $value = $request->bearerToken();
-        $id    = (new Parser())->parse($value)->getHeader('jti');
+    	$value = $request->bearerToken();
+        //$id    = (new Parser())->parse($value)->getHeader('jti');
+        $id    = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
         $user  = Token::find($id);
         $user_id = @$user->user_id;
         $amountdata=[];
@@ -1066,7 +1084,8 @@ class AppapiController extends Controller{
     public function readnotification(Request $request){
         
     	    $value = $request->bearerToken();
-        $id    = (new Parser())->parse($value)->getHeader('jti');
+        //$id    = (new Parser())->parse($value)->getHeader('jti');
+        $id    = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
         $user  = Token::find($id);
         $user_id = @$user->user_id;
 
@@ -1103,8 +1122,8 @@ class AppapiController extends Controller{
      // brand and transport list
      public function searchBuyers(Request $request){
         $value = $request->bearerToken();
-    	$id = (new Parser())->parse($value)->getHeader('jti');
-    	
+    	//$id = (new Parser())->parse($value)->getHeader('jti');
+    	$id    = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
     	 $user_id = Token::find($id)->user_id;
     	
     	 

@@ -6,7 +6,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\{SuppliersModels,BuyerModel,FcmModel,BrandModel,ItemModel};
 use Illuminate\Support\Facades\Validator;
-use Lcobucci\JWT\Parser;
+//use Lcobucci\JWT\Parser;
+use Lcobucci\JWT\Encoding\JoseEncoder;
+use Lcobucci\JWT\Token\Parser;
 use App\User;
 use Auth;
 use Hash;
@@ -93,7 +95,8 @@ class LoginController extends Controller{
     }
     
     public function loginbytoken(Request $request){
-        $users   = Token::find((new Parser())->parse($request->bearerToken())->getHeader('jti'))->user_id;
+        $id = (new Parser(new JoseEncoder()))->parse($request->bearerToken())->claims()->all()['jti'];
+        $users   = Token::find($id)->user_id;
         if($users){
            
             return $this->users(Auth::loginUsingId($users),$request);
@@ -168,7 +171,8 @@ class LoginController extends Controller{
       $new_pass = $request->new_pass;
       $confirm_pass = $request->confirm_pass;
     
-          $id = (new Parser())->parse($value)->getHeader('jti');
+        $id = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
+        
       $user_id = Token::find($id)->user_id;
       
        if(!empty($user_id))
@@ -234,7 +238,8 @@ class LoginController extends Controller{
       $new_pass = $request->new_pass;
       $confirm_pass = $request->confirm_pass;
     
-      $id = (new Parser())->parse($value)->getHeader('jti');
+     // $id = (new Parser())->parse($value)->getHeader('jti');
+      $id = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti']; 
       $user_id = Token::find($id)->user_id;
       
        if(!empty($user_id))
@@ -347,7 +352,9 @@ class LoginController extends Controller{
       
            
             $value = $request->bearerToken();
-        $id = (new Parser())->parse($value)->getHeader('jti');
+        //$id = (new Parser())->parse($value)->getHeader('jti');
+        $id = (new Parser(new JoseEncoder()))->parse($value)->claims()->all()['jti'];
+        //$users   = Token::find($id)->user_id;
         $revoked = DB::table('oauth_access_tokens')->where('id', '=', $id)->update(['revoked' => 1]);
         $query = FcmModel::where('device_id', $request->device_id)->update(array('device_fcm' =>'','is_login'=>0,'updated_at' =>date('Y-m-d H:i:s')));
         DB::table('user_fcm_data')->where('device_id', $request->device_id)->update(array('device_fcm' =>'','is_login'=>0,'updated_at' =>date('Y-m-d H:i:s')));

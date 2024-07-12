@@ -38,7 +38,7 @@ class OrderController extends Controller{
          if($request->all()){
             //dd($request->all());
              //$orders1 = User::select('users.*', 'orders.*')->join("orders",function($join){$join->on("orders.supplier_id","=","users.id")->orOn("orders.buyer_id","=","users.id");});
-            $orders1 = User::select('users.*', 'orders.*')->join("orders",function($join){$join->on("orders.supplier_id","=","users.id");});
+            $orders1 = User::select('users.id as userid','users.name','users.email', 'orders.*' )->join("orders",function($join){$join->on("orders.supplier_id","=","users.id");});
              
             if($request->name != ''){
                 $orders1->where('users.name','like','%'.$request->name.'%');
